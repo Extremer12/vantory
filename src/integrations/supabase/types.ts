@@ -14,7 +14,142 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      categories: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          category_id: string | null
+          cost_price: number
+          created_at: string | null
+          current_stock: number | null
+          id: string
+          min_stock: number | null
+          name: string
+          sale_price: number
+          sku: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category_id?: string | null
+          cost_price: number
+          created_at?: string | null
+          current_stock?: number | null
+          id?: string
+          min_stock?: number | null
+          name: string
+          sale_price: number
+          sku?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category_id?: string | null
+          cost_price?: number
+          created_at?: string | null
+          current_stock?: number | null
+          id?: string
+          min_stock?: number | null
+          name?: string
+          sale_price?: number
+          sku?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          business_name: string
+          created_at: string | null
+          currency: string | null
+          id: string
+          sector: string | null
+        }
+        Insert: {
+          business_name: string
+          created_at?: string | null
+          currency?: string | null
+          id: string
+          sector?: string | null
+        }
+        Update: {
+          business_name?: string
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          sector?: string | null
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          description: string | null
+          id: string
+          product_id: string | null
+          quantity: number
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          product_id?: string | null
+          quantity?: number
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          product_id?: string | null
+          quantity?: number
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
