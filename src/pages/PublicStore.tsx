@@ -114,7 +114,7 @@ export default function PublicStorePage() {
   const { data: profile, isLoading: isProfileLoading, error: profileError } = useQuery<any, Error>({
     queryKey: ['public-store', slug],
     queryFn: async (): Promise<any> => {
-      const normalizedSlug = slug?.toLowerCase();
+      const normalizedSlug = slug?.toLowerCase().trim();
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -123,10 +123,10 @@ export default function PublicStorePage() {
         .maybeSingle();
 
       if (error) throw error;
-      if (!data) throw new Error('Tienda no encontrada o inactiva');
+      if (!data) throw new Error('Tienda no encontrada. Verifica el enlace o asegúrate de que tu tienda sea pública.');
       return data;
     },
-    retry: false,
+    retry: 1,
   });
 
   // Fetch products with pagination (12 per page)
