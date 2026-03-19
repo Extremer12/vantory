@@ -21,8 +21,10 @@ const queryClient = new QueryClient();
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const location = useLocation();
+  
   if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Cargando...</div>;
   if (!user) return <Navigate to="/auth" replace />;
+  
   return <AppLayout locationKey={location.pathname}>{children}</AppLayout>;
 }
 

@@ -69,11 +69,12 @@ export default function AuthPage() {
       {/* Left side: Form */}
       <div className="flex-1 flex flex-col justify-center px-4 sm:px-6 lg:px-20 xl:px-24">
         <div className="mx-auto w-full max-w-sm lg:max-w-md">
-          <div className="flex items-center gap-2 mb-8">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <Package2 className="h-6 w-6 text-primary" />
-            </div>
-            <span className="text-2xl font-bold tracking-tight text-primary">StockLogic</span>
+          <div className="flex items-center justify-center mb-8">
+            <img 
+              src="/images/lgsinfondo-conletras.png" 
+              alt="Vantory Logo" 
+              className="h-16 w-auto object-contain hover:scale-105 transition-transform duration-300"
+            />
           </div>
 
           <div className="space-y-6">

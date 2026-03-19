@@ -14,7 +14,6 @@ export function StatCard({ label, value, trend, icon: Icon }: StatCardProps) {
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
       className="relative bg-card rounded-xl p-5 shadow-card border border-white/5 backdrop-blur-xl overflow-hidden group"
     >
-      {/* Subtle Glow Effect */}
       <div className="absolute -right-6 -top-6 w-24 h-24 bg-primary/10 rounded-full blur-[30px] group-hover:bg-primary/20 transition-colors duration-500" />
       
       <div className="relative z-10">

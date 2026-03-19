@@ -242,7 +242,7 @@ export default function PublicStorePage() {
             <img 
               src={(profile as any).store_banner_url} 
               alt="Banner referencial" 
-              className="w-full h-full object-cover opacity-50 parallax-bg" 
+              className="w-full h-full object-cover opacity-50" 
             />
           ) : (
             <div className={`w-full h-full ${themeMode === 'light' ? 'bg-slate-100' : 'bg-white/5'}`} />
@@ -252,17 +252,21 @@ export default function PublicStorePage() {
         </div>
 
         {/* Hero Content (Centered) */}
-        <div className="relative z-10 w-full flex flex-col items-center justify-center px-4 translate-y-16">
+        <div className="relative z-10 w-full flex flex-col items-center justify-center px-4 translate-y-12 sm:translate-y-16">
           <motion.div 
-            initial={{ opacity: 0, y: 15, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className={`w-32 h-32 md:w-40 md:h-40 rounded-[2rem] ${themeMode === 'light' ? 'bg-white/80 border-white/50 shadow-[0_20px_40px_rgba(0,0,0,0.08)]' : 'bg-black/50 border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.4)]'} backdrop-blur-2xl border-2 overflow-hidden flex-shrink-0 flex items-center justify-center relative ring-4 ring-background`}
+            className={`w-28 h-28 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-[1.5rem] sm:rounded-[2rem] ${themeMode === 'light' ? 'bg-white/80 border-white/50 shadow-[0_20px_40px_rgba(0,0,0,0.08)]' : 'bg-black/50 border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.4)]'} backdrop-blur-2xl border-2 overflow-hidden flex-shrink-0 flex items-center justify-center relative ring-4 ring-background`}
           >
             {(profile as any).store_logo_url ? (
               <img src={(profile as any).store_logo_url} alt={`Logo de ${profile.business_name}`} className="w-full h-full object-cover" />
             ) : (
-              <Store className="h-12 w-12 md:h-16 md:w-16 text-primary/80" />
+              <img 
+                src="/images/lgsinfondo-conletras.png" 
+                alt="Vantory Logo" 
+                className="w-4/5 h-auto object-contain" 
+              />
             )}
           </motion.div>
           
@@ -270,14 +274,14 @@ export default function PublicStorePage() {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-6 text-center max-w-2xl px-4"
+            className="mt-4 sm:mt-6 text-center max-w-2xl px-4"
           >
-            <h1 className={`text-4xl md:text-6xl font-black tracking-tighter ${themeMode === 'light' ? 'text-slate-900' : 'text-white'} mb-4 drop-shadow-sm`}>
+            <h1 className={`text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter ${themeMode === 'light' ? 'text-slate-900' : 'text-white'} mb-3 sm:mb-4 drop-shadow-sm`}>
               {profile.business_name || 'Mi Tienda'}
             </h1>
             
             {(profile as any).store_description && (
-              <p className={`text-base md:text-lg ${t.textSub} leading-relaxed max-w-xl mx-auto font-medium`}>
+              <p className={`text-sm sm:text-base md:text-lg ${t.textSub} leading-relaxed max-w-xl mx-auto font-medium`}>
                 {(profile as any).store_description}
               </p>
             )}
@@ -315,7 +319,7 @@ export default function PublicStorePage() {
             <div className="flex items-center gap-3 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 no-scrollbar mask-edges">
               <button
                 onClick={() => { setSelectedCategory(null); setShowFavorites(false); }}
-                className={`px-6 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-300 whitespace-nowrap border tracking-wide ${
+                className={`px-5 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold transition-all duration-300 whitespace-nowrap border tracking-wide flex-shrink-0 ${
                   selectedCategory === null && !showFavorites
                     ? `bg-foreground text-background border-foreground shadow-lg` 
                     : `${themeMode === 'light' ? 'bg-white/60 border-slate-200 text-slate-600 hover:bg-white hover:border-slate-300 backdrop-blur-md' : 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10 hover:text-white backdrop-blur-md'}`
@@ -325,7 +329,7 @@ export default function PublicStorePage() {
               </button>
               <button
                 onClick={() => { setSelectedCategory(null); setShowFavorites(true); }}
-                className={`px-6 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-300 whitespace-nowrap flex items-center gap-2 border tracking-wide ${
+                className={`px-5 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold transition-all duration-300 whitespace-nowrap flex items-center gap-2 border tracking-wide flex-shrink-0 ${
                   showFavorites
                     ? 'bg-rose-500 border-rose-500 text-white shadow-[0_8px_20px_rgba(244,63,94,0.3)]' 
                     : `${themeMode === 'light' ? 'bg-white/60 border-slate-200 text-slate-600 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-500 backdrop-blur-md' : 'bg-white/5 border-white/5 text-white/60 hover:bg-rose-500/10 hover:border-rose-500/30 hover:text-rose-400 backdrop-blur-md'}`
@@ -338,7 +342,7 @@ export default function PublicStorePage() {
                 <button
                   key={cat}
                   onClick={() => { setSelectedCategory(cat); setShowFavorites(false); }}
-                  className={`px-6 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-300 whitespace-nowrap border tracking-wide ${
+                  className={`px-5 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold transition-all duration-300 whitespace-nowrap border tracking-wide flex-shrink-0 ${
                     selectedCategory === cat && !showFavorites
                       ? `bg-foreground text-background border-foreground shadow-lg` 
                       : `${themeMode === 'light' ? 'bg-white/60 border-slate-200 text-slate-600 hover:bg-white hover:border-slate-300 backdrop-blur-md' : 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10 hover:text-white backdrop-blur-md'}`
@@ -353,9 +357,9 @@ export default function PublicStorePage() {
 
         {/* Product Grid */}
         {isProductsLoading ? (
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 md:gap-8">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className={`rounded-[2rem] aspect-[4/5] animate-pulse border ${themeMode === 'light' ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/5'}`} />
+              <div key={i} className={`rounded-[1.5rem] sm:rounded-[2rem] aspect-[4/5] animate-pulse border ${themeMode === 'light' ? 'bg-slate-100 border-slate-200' : 'bg-white/5 border-white/5'}`} />
             ))}
           </div>
         ) : filteredProducts && filteredProducts.length > 0 ? (
@@ -370,7 +374,7 @@ export default function PublicStorePage() {
                 transition: { staggerChildren: 0.05 }
               }
             }}
-            className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-8"
+            className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 md:gap-8"
           >
             {filteredProducts.map((p) => {
               const isOutOfStock = !p.current_stock || p.current_stock === 0;
@@ -388,17 +392,17 @@ export default function PublicStorePage() {
                   }}
                   className={`group relative flex flex-col rounded-[2rem] p-2 overflow-hidden transition-all duration-500 cursor-pointer ${t.card}`}
                 >
-                  <div className={`relative aspect-[4/5] w-full overflow-hidden rounded-[1.5rem] ${themeMode === 'light' ? 'bg-slate-50' : 'bg-[#0a0a0b]'}`}>
+                  <div className={`relative aspect-[4/5] w-full overflow-hidden rounded-[1.2rem] sm:rounded-[1.5rem] ${themeMode === 'light' ? 'bg-slate-50' : 'bg-[#0a0a0b]'}`}>
                     {/* Add Heart Button Overlay */}
                     <button
                       onClick={(e) => toggleFavorite(p.id, e)}
-                      className={`absolute top-3 right-3 z-30 p-2.5 rounded-full backdrop-blur-md transition-all duration-300 ${
+                      className={`absolute top-2 sm:top-3 right-2 sm:right-3 z-30 p-2 sm:p-2.5 rounded-full backdrop-blur-md transition-all duration-300 ${
                         favorites.includes(p.id)
                           ? 'bg-white text-rose-500 shadow-xl scale-100'
                           : 'bg-black/20 text-white hover:bg-white hover:text-rose-500 hover:scale-110'
                       }`}
                     >
-                      <Heart size={16} className={favorites.includes(p.id) ? "fill-current" : ""} />
+                      <Heart size={14} className={favorites.includes(p.id) ? "fill-current" : "sm:w-4 sm:h-4"} />
                     </button>
 
                     {(p as any).image_url ? (
@@ -434,11 +438,11 @@ export default function PublicStorePage() {
                       {p.name}
                     </h3>
                     
-                    <div className="mt-auto flex items-end justify-between gap-3">
+                    <div className="mt-auto flex items-end justify-between gap-2 sm:gap-3">
                       <div className="flex flex-col">
-                        <span className={`text-[11px] font-medium uppercase tracking-wider mb-0.5 ${t.textMuted}`}>Precio</span>
+                        <span className={`text-[10px] sm:text-[11px] font-medium uppercase tracking-wider mb-0.5 ${t.textMuted}`}>Precio</span>
                         <div className="flex items-baseline gap-1">
-                          <span className={`text-xl md:text-2xl font-black tracking-tighter ${themeMode === 'light' ? 'text-slate-900' : 'text-white'}`}>
+                          <span className={`text-lg sm:text-xl md:text-2xl font-black tracking-tighter ${themeMode === 'light' ? 'text-slate-900' : 'text-white'}`}>
                             ${Number(p.sale_price).toFixed(2)}
                           </span>
                         </div>
@@ -452,13 +456,13 @@ export default function PublicStorePage() {
                           addToCart(p);
                           toast.success(`${p.name} añadido al carrito`);
                         }}
-                        className={`h-11 w-11 rounded-2xl transition-all duration-300 shadow-none ${
+                        className={`h-9 w-9 sm:h-11 sm:w-11 rounded-xl sm:rounded-2xl transition-all duration-300 shadow-none flex-shrink-0 ${
                           isOutOfStock 
                             ? (themeMode === 'light' ? 'bg-slate-100 text-slate-400' : 'bg-white/5 text-white/30')
                             : `bg-foreground hover:bg-foreground/90 text-background hover:scale-105 active:scale-95`
                         }`}
                       >
-                        <ShoppingCart size={18} /> 
+                        <ShoppingCart size={16} className="sm:w-4.5 sm:h-4.5" /> 
                       </Button>
                     </div>
                   </div>

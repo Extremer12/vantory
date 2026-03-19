@@ -21,10 +21,19 @@ export default function AppLayout({ children, locationKey }: AppLayoutProps) {
         <div className="z-10 flex w-full">
           <AppSidebar />
           <div className="flex-1 flex flex-col min-w-0">
-            <header className="h-14 flex items-center border-b border-white/5 bg-background/50 backdrop-blur-xl px-4 sticky top-0 z-20">
-              <SidebarTrigger className="text-foreground/80 hover:text-foreground hover:bg-white/5" />
+            <header className="h-14 sm:h-16 flex items-center justify-between border-b border-white/5 bg-background/50 backdrop-blur-xl px-4 sticky top-0 z-20">
+              <div className="flex items-center gap-4">
+                <SidebarTrigger className="text-foreground/80 hover:text-foreground hover:bg-white/5" />
+                <div className="md:hidden flex items-center">
+                  <img 
+                    src="/images/lgsinfondo-conletras.png" 
+                    alt="Vantory" 
+                    className="h-7 w-auto object-contain"
+                  />
+                </div>
+              </div>
             </header>
-            <main className="flex-1 p-6 overflow-auto relative z-10">
+            <main className="flex-1 p-4 sm:p-6 overflow-auto relative z-10">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={locationKey}

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
@@ -12,9 +12,7 @@ import { toast } from 'sonner';
 import { DataTable } from '@/components/DataTable';
 import { ColumnDef } from '@tanstack/react-table';
 import { SectionHelp } from '@/components/SectionHelp';
-import { motion, AnimatePresence } from 'framer-motion';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { motion } from 'framer-motion';
 
 const typeLabels: Record<string, string> = {
   sale: 'Venta',
@@ -30,7 +28,6 @@ const typeColors: Record<string, string> = {
   adjustment: 'text-muted-foreground bg-muted/10 border-muted/20',
 };
 
-// Define columns for TanStack Table
 const columns: ColumnDef<any>[] = [
   {
     accessorKey: 'created_at',
@@ -88,7 +85,7 @@ export default function TransactionsPage() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'sale' | 'purchase' | 'expense'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'sale' | 'purchase' | 'expense' | 'income' | 'adjustment'>('all');
   const [form, setForm] = useState({
     type: 'sale' as string,
     product_id: '',
@@ -100,7 +97,6 @@ export default function TransactionsPage() {
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(10);
 
-  // Fetch all transactions minimal data for global stats card
   const { data: stats } = useQuery({
     queryKey: ['transactions-stats', user?.id],
     queryFn: async () => {
@@ -169,7 +165,7 @@ export default function TransactionsPage() {
       const { error } = await supabase.from('transactions').insert({
         user_id: user!.id,
         type: form.type,
-        product_id: form.product_id || null,
+        product_id: form.product_id === 'none' ? null : (form.product_id || null),
         amount: parseFloat(form.amount),
         quantity: parseInt(form.quantity),
         description: form.description || null,
@@ -188,7 +184,6 @@ export default function TransactionsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header with Help */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -197,26 +192,9 @@ export default function TransactionsPage() {
               title="Historial de Transacciones"
               description="Controla cada movimiento de tu negocio: ventas, compras de stock y gastos operativos."
               steps={[
-                {
-                  title: "Registrar Movimientos",
-                  description: "Usa el botón 'Nueva Transacción' para ingresar ventas (ingresos), compras (egresos) o gastos fijos.",
-                  icon: Receipt
-                },
-                {
-                  title: "Métricas en Tiempo Real",
-                  description: "Las tarjetas superiores te muestran el balance total, ventas brutas y gastos acumulados.",
-                  icon: TrendingUp
-                },
-                {
-                  title: "Filtros Avanzados",
-                  description: "Busca transacciones específicas por su descripción o fíltralas por tipo para analizar mejor tus finanzas.",
-                  icon: Wallet
-                },
-                {
-                  title: "Seguimiento de Stock",
-                  description: "Al registrar ventas o compras vinculadas a productos, el stock se actualizará automáticamente.",
-                  icon: History
-                }
+                { title: "Registrar Movimientos", description: "Ventas (ingresos), compras (egresos) o gastos fijos.", icon: Receipt },
+                { title: "Métricas", description: "Tarjetas superiores muestran balance total y ventas.", icon: TrendingUp },
+                { title: "Stock", description: "Ventas/compras vinculadas actualizan el stock automáticamente.", icon: History }
               ]}
             />
           </div>
@@ -225,11 +203,11 @@ export default function TransactionsPage() {
         
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-shadow">
+            <Button className="gap-2 shadow-lg shadow-primary/20">
               <Plus size={18} /> Nueva Transacción
             </Button>
           </DialogTrigger>
-          <DialogContent className="border-white/10 bg-background/80 backdrop-blur-xl">
+          <DialogContent className="border-white/10 bg-background/95 backdrop-blur-xl">
             <DialogHeader>
               <DialogTitle>Registrar Movimiento</DialogTitle>
             </DialogHeader>
@@ -237,7 +215,7 @@ export default function TransactionsPage() {
               <div className="space-y-2">
                 <Label>Tipo de Movimiento</Label>
                 <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
-                  <SelectTrigger className="bg-white/5 border-white/10 focus:ring-primary"><SelectValue placeholder="Seleccionar tipo" /></SelectTrigger>
+                  <SelectTrigger className="bg-white/5 border-white/10"><SelectValue /></SelectTrigger>
                   <SelectContent className="border-white/10 bg-background/90 backdrop-blur-xl">
                     <SelectItem value="sale">Venta</SelectItem>
                     <SelectItem value="income">Ingreso</SelectItem>
@@ -247,56 +225,34 @@ export default function TransactionsPage() {
                 </Select>
               </div>
               
-              {(form.type === 'sale' || form.type === 'income' || form.type === 'adjustment') && (
-                <div className="space-y-2">
-                  <Label>Producto (Opcional)</Label>
-                  <Select value={form.product_id} onValueChange={(v) => setForm({ ...form, product_id: v })}>
-                    <SelectTrigger className="bg-white/5 border-white/10 focus:ring-primary">
-                      <SelectValue placeholder="Seleccionar producto" />
-                    </SelectTrigger>
-                    <SelectContent className="border-white/10 bg-background/90 backdrop-blur-xl">
-                      <SelectItem value="none">Ninguno</SelectItem>
-                      {products?.map((p: any) => (
-                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label>Producto (Opcional)</Label>
+                <Select value={form.product_id} onValueChange={(v) => setForm({ ...form, product_id: v })}>
+                  <SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Seleccionar producto" /></SelectTrigger>
+                  <SelectContent className="border-white/10 bg-background/90 backdrop-blur-xl">
+                    <SelectItem value="none">Ninguno</SelectItem>
+                    {products?.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Monto ($)</Label>
-                  <Input 
-                    type="number" 
-                    step="0.01" 
-                    value={form.amount} 
-                    onChange={(e) => setForm({ ...form, amount: e.target.value })} 
-                    required 
-                    className="bg-white/5 border-white/10 focus-visible:ring-primary"
-                    placeholder="0.00"
-                  />
+                  <Input type="number" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required className="bg-white/5 border-white/10" placeholder="0.00" />
                 </div>
                 <div className="space-y-2">
                   <Label>Cantidad</Label>
-                  <Input 
-                    type="number" 
-                    value={form.quantity} 
-                    onChange={(e) => setForm({ ...form, quantity: e.target.value })} 
-                    className="bg-white/5 border-white/10 focus-visible:ring-primary"
-                  />
+                  <Input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} className="bg-white/5 border-white/10" />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label>Descripción</Label>
-                <Input 
-                  value={form.description} 
-                  onChange={(e) => setForm({ ...form, description: e.target.value })} 
-                  className="bg-white/5 border-white/10 focus-visible:ring-primary"
-                  placeholder="Detalles de la transacción..."
-                />
+                <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="bg-white/5 border-white/10" placeholder="Detalles..." />
               </div>
-              <Button type="submit" className="w-full mt-2 shadow-lg shadow-primary/20" disabled={addTransaction.isPending}>
+              <Button type="submit" className="w-full mt-2" disabled={addTransaction.isPending}>
                 {addTransaction.isPending ? 'Procesando...' : 'Confirmar Registro'}
               </Button>
             </form>
@@ -304,135 +260,41 @@ export default function TransactionsPage() {
         </Dialog>
       </div>
 
-      {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-5 rounded-2xl bg-card border border-white/5 backdrop-blur-xl shadow-sm hover:border-primary/20 transition-colors"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-primary/10 text-primary">
-              <Wallet size={20} />
-            </div>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Balance Total</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-2xl font-bold tabular-nums">
-              ${stats?.balance.toLocaleString('es-ES', { minimumFractionDigits: 2 }) || '0.00'}
-            </span>
-            <span className="text-[10px] text-muted-foreground mt-1">Diferencia entre ingresos y gastos</span>
-          </div>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-5 rounded-2xl bg-card border border-white/5 shadow-sm">
+          <div className="flex items-center gap-3 mb-2"><Wallet size={18} className="text-primary" /><span className="text-xs font-bold text-muted-foreground uppercase">Balance</span></div>
+          <div className="text-2xl font-bold">${stats?.balance.toFixed(2) || '0.00'}</div>
         </motion.div>
-
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="p-5 rounded-2xl bg-card border border-white/5 backdrop-blur-xl shadow-sm hover:border-success/20 transition-colors"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-success/10 text-success">
-              <ArrowUpRight size={20} />
-            </div>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ventas Totales</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-2xl font-bold tabular-nums text-success">
-              ${stats?.sales.toLocaleString('es-ES', { minimumFractionDigits: 2 }) || '0.00'}
-            </span>
-            <span className="text-[10px] text-muted-foreground mt-1">Ingresos brutos acumulados</span>
-          </div>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="p-5 rounded-2xl bg-card border border-white/5 shadow-sm">
+          <div className="flex items-center gap-3 mb-2"><ArrowUpRight size={18} className="text-success" /><span className="text-xs font-bold text-muted-foreground uppercase">Ventas</span></div>
+          <div className="text-2xl font-bold text-success">${stats?.sales.toFixed(2) || '0.00'}</div>
         </motion.div>
-
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="p-5 rounded-2xl bg-card border border-white/5 backdrop-blur-xl shadow-sm hover:border-destructive/20 transition-colors"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-destructive/10 text-destructive">
-              <ArrowDownLeft size={20} />
-            </div>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Compras Stock</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-2xl font-bold tabular-nums text-destructive">
-              ${stats?.purchases.toLocaleString('es-ES', { minimumFractionDigits: 2 }) || '0.00'}
-            </span>
-            <span className="text-[10px] text-muted-foreground mt-1">Inversiones en inventario</span>
-          </div>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="p-5 rounded-2xl bg-card border border-white/5 shadow-sm">
+          <div className="flex items-center gap-3 mb-2"><ArrowDownLeft size={18} className="text-destructive" /><span className="text-xs font-bold text-muted-foreground uppercase">Compras</span></div>
+          <div className="text-2xl font-bold text-destructive">${stats?.purchases.toFixed(2) || '0.00'}</div>
         </motion.div>
-
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="p-5 rounded-2xl bg-card border border-white/5 backdrop-blur-xl shadow-sm hover:border-warning/20 transition-colors"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-warning/10 text-warning">
-              <TrendingDown size={20} />
-            </div>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Gastos Varios</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-2xl font-bold tabular-nums text-warning">
-              ${stats?.expenses.toLocaleString('es-ES', { minimumFractionDigits: 2 }) || '0.00'}
-            </span>
-            <span className="text-[10px] text-muted-foreground mt-1">Servicios, local y otros</span>
-          </div>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="p-5 rounded-2xl bg-card border border-white/5 shadow-sm">
+          <div className="flex items-center gap-3 mb-2"><TrendingDown size={18} className="text-warning" /><span className="text-xs font-bold text-muted-foreground uppercase">Otros</span></div>
+          <div className="text-2xl font-bold text-warning">${stats?.expenses.toFixed(2) || '0.00'}</div>
         </motion.div>
       </div>
 
-      {/* Main Content Area with Filters */}
-      <div className="bg-card border border-white/5 rounded-3xl p-6 backdrop-blur-xl shadow-xl overflow-hidden">
+      <div className="bg-card border border-white/5 rounded-3xl p-6 shadow-xl">
         <div className="flex flex-col md:flex-row gap-4 mb-6 items-center justify-between">
           <div className="relative w-full max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por descripción..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setPageIndex(0);
-              }}
-              className="pl-9 h-11 bg-white/5 border-white/10 focus:border-primary/40 transition-all rounded-xl"
-            />
+            <Input placeholder="Buscar..." value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setPageIndex(0); }} className="pl-9 bg-white/5 border-white/10" />
           </div>
-          
-          <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl border border-white/10 w-full md:w-auto">
-            <button 
-              onClick={() => { setTypeFilter('all'); setPageIndex(0); }}
-              className={`flex-1 md:flex-none px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${typeFilter === 'all' ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:text-foreground'}`}
-            >
-              Todos
-            </button>
-            <button 
-              onClick={() => { setTypeFilter('sale'); setPageIndex(0); }}
-              className={`flex-1 md:flex-none px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${typeFilter === 'sale' ? 'bg-success text-white shadow-md' : 'text-muted-foreground hover:text-foreground'}`}
-            >
-              Ventas
-            </button>
-            <button 
-              onClick={() => { setTypeFilter('purchase'); setPageIndex(0); }}
-              className={`flex-1 md:flex-none px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${typeFilter === 'purchase' ? 'bg-destructive text-white shadow-md' : 'text-muted-foreground hover:text-foreground'}`}
-            >
-              Compras
-            </button>
+          <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl border border-white/10 overflow-x-auto">
+            {['all', 'sale', 'income', 'expense', 'adjustment'].map((f) => (
+              <button key={f} onClick={() => { setTypeFilter(f as any); setPageIndex(0); }} className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${typeFilter === f ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                {f === 'all' ? 'Todos' : typeLabels[f] || f}
+              </button>
+            ))}
           </div>
         </div>
 
-        <DataTable 
-          columns={columns} 
-          data={transactions || []} 
-          searchPlaceholder="Filtrar por descripción..." 
-          pageCount={pageCount}
-          pageIndex={pageIndex}
-          pageSize={pageSize}
-          onPageChange={setPageIndex}
-        />
+        <DataTable columns={columns} data={transactions} searchPlaceholder="Filtrar..." pageCount={pageCount} pageIndex={pageIndex} pageSize={pageSize} onPaginationChange={(idx, size) => { setPageIndex(idx); setPageSize(size); }} onSearchChange={setSearchQuery} />
       </div>
     </div>
   );

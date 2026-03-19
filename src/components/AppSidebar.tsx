@@ -28,19 +28,32 @@ const navItems = [
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
-  const { signOut, user } = useAuth();
+  const { signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   return (
     <Sidebar collapsible="icon" className="border-r border-white/5 bg-background/50 backdrop-blur-xl">
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="h-14 font-bold text-primary/90 flex items-center">
-            {!collapsed && (
-              <span className="text-lg tracking-tight ml-2">StockLogic</span>
-            )}
-            {collapsed && (
-              <span className="text-lg tracking-tight mx-auto">SL</span>
+          <SidebarGroupLabel className="h-20 flex items-center justify-center p-0">
+            {!collapsed ? (
+              <div className="flex items-center justify-center w-full px-4 mt-4">
+                <img 
+                  src="/images/lgsinfondo-conletras.png" 
+                  alt="Vantory Logo" 
+                  className="h-10 w-auto object-contain transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer" 
+                  onClick={() => window.location.href = '/'}
+                />
+              </div>
+            ) : (
+              <div className="flex items-center justify-center w-full mt-4">
+                <img 
+                  src="/images/lgsinfondo-sinletras.png" 
+                  alt="V" 
+                  className="h-8 w-auto object-contain transition-all duration-300 hover:scale-110 active:scale-90 cursor-pointer" 
+                  onClick={() => window.location.href = '/'}
+                />
+              </div>
             )}
           </SidebarGroupLabel>
           <SidebarGroupContent className="mt-2">

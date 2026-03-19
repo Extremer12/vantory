@@ -3,7 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-export const generateInventoryPDF = (products: any[], businessName: string = 'Smart Inventory Pro') => {
+export const generateInventoryPDF = (products: any[], businessName: string = 'Vantory') => {
   const doc = new jsPDF();
   const now = new Date();
   const dateStr = format(now, "dd 'de' MMMM, yyyy", { locale: es });
@@ -89,7 +89,7 @@ export const generateInventoryPDF = (products: any[], businessName: string = 'Sm
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
     doc.text(
-      `Página ${i} de ${pageCount} - Generado por Smart Inventory Pro`,
+      `Página ${i} de ${pageCount} - Generado por Vantory`,
       105,
       285,
       { align: 'center' }
