@@ -8,8 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { SectionHelp } from '@/components/SectionHelp';
-import { Store, Globe, Type, Image as ImageIcon, Link as LinkIcon, Save, Copy, Upload, X, MessageCircle, Moon, Sun, Palette, Layout, Paintbrush, Layers } from 'lucide-react';
+import { Store, Globe, Type, Image as ImageIcon, Link as LinkIcon, Save, Copy, Upload, X, MessageCircle, Moon, Sun, Palette, Layout, Paintbrush, Layers, Instagram, Facebook, Music2, Search, MapPin, Mail } from 'lucide-react';
 import { toast } from 'sonner';
+import { ImageCropper } from '@/components/ImageCropper';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function StoreSettingsPage() {
   const { user } = useAuth();
@@ -26,8 +30,18 @@ export default function StoreSettingsPage() {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [primaryColor, setPrimaryColor] = useState('#000000');
   const [carouselImages, setCarouselImages] = useState<string[]>([]);
+  const [carouselRatio, setCarouselRatio] = useState('panoramic');
   const [bannerText, setBannerText] = useState('');
   const [headerStyle, setHeaderStyle] = useState('classic');
+  const [instagram, setInstagram] = useState('');
+  const [facebook, setFacebook] = useState('');
+  const [tiktok, setTiktok] = useState('');
+  const [storeEmail, setStoreEmail] = useState('');
+  const [storeAddress, setStoreAddress] = useState('');
+  const [seoTitle, setSeoTitle] = useState('');
+  const [seoDescription, setSeoDescription] = useState('');
+  const [fontFamily, setFontFamily] = useState('Inter');
+  const [buttonRadius, setButtonRadius] = useState('xl');
 
   // File states
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -39,7 +53,12 @@ export default function StoreSettingsPage() {
   const [uploading, setUploading] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+  const carouselInputRef = useRef<HTMLInputElement>(null);
   const isLoadedRef = useRef(false);
+
+  // Cropper state
+  const [croppingImage, setCroppingImage] = useState<string | null>(null);
+  const [isCropping, setIsCropping] = useState(false);
 
   // Fetch profile
   const { data: profile, isLoading } = useQuery({
@@ -68,10 +87,19 @@ export default function StoreSettingsPage() {
       setWhatsapp((profile as any).store_whatsapp || '');
       setTheme((profile as any).store_theme || 'dark');
       setPrimaryColor((profile as any).store_primary_color || '#000000');
-      setCarouselImages((profile as any).store_carousel_images || []);
+      setCarouselRatio((profile as any).store_carousel_ratio || 'panoramic');
       setCarouselPreviews((profile as any).store_carousel_images || []);
       setBannerText((profile as any).store_banner_text || '');
       setHeaderStyle((profile as any).store_header_style || 'classic');
+      setInstagram((profile as any).store_instagram || '');
+      setFacebook((profile as any).store_facebook || '');
+      setTiktok((profile as any).store_tiktok || '');
+      setStoreEmail((profile as any).store_email || '');
+      setStoreAddress((profile as any).store_address || '');
+      setSeoTitle((profile as any).store_seo_title || '');
+      setSeoDescription((profile as any).store_seo_description || '');
+      setFontFamily((profile as any).store_font_family || 'Inter');
+      setButtonRadius((profile as any).store_button_radius || 'xl');
       isLoadedRef.current = true;
     }
   }, [profile]);
@@ -111,22 +139,31 @@ export default function StoreSettingsPage() {
   };
 
   const handleCarouselSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-    
-    const validFiles = files.filter(file => {
-      if (!file.type.startsWith('image/')) { toast.error(`Archivo ${file.name} no es una imagen`); return false; }
-      if (file.size > 5 * 1024 * 1024) { toast.error(`${file.name} supera 5MB`); return false; }
-      return true;
-    });
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Solo se permiten imágenes'); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error('La imagen no puede superar 5MB'); return; }
 
-    setCarouselFiles(prev => [...prev, ...validFiles]);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setCroppingImage(reader.result as string);
+      setIsCropping(true);
+    };
+    reader.readAsDataURL(file);
     
-    validFiles.forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => setCarouselPreviews(prev => [...prev, reader.result as string]);
-      reader.readAsDataURL(file);
-    });
+    // Reset input so the same file can be selected again if needed
+    if (carouselInputRef.current) carouselInputRef.current.value = '';
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    const fileName = `carousel_${Date.now()}.jpg`;
+    const croppedFile = new File([croppedBlob], fileName, { type: 'image/jpeg' });
+    
+    setCarouselFiles(prev => [...prev, croppedFile]);
+    setCarouselPreviews(prev => [...prev, URL.createObjectURL(croppedBlob)]);
+    
+    setIsCropping(false);
+    setCroppingImage(null);
   };
 
   const removeCarouselImage = (index: number) => {
@@ -199,8 +236,18 @@ export default function StoreSettingsPage() {
           store_theme: theme as any,
           store_primary_color: primaryColor,
           store_carousel_images: finalCarouselUrls,
+          store_carousel_ratio: carouselRatio,
           store_banner_text: bannerText,
           store_header_style: headerStyle,
+          store_instagram: instagram,
+          store_facebook: facebook,
+          store_tiktok: tiktok,
+          store_email: storeEmail,
+          store_address: storeAddress,
+          store_seo_title: seoTitle,
+          store_seo_description: seoDescription,
+          store_font_family: fontFamily,
+          store_button_radius: buttonRadius,
         } as any)
         .eq('id', user!.id);
       
@@ -254,337 +301,382 @@ export default function StoreSettingsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-10">
-      <div>
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Mi Tienda Online</h1>
-          <SectionHelp 
-            title="Configuración de Tienda"
-            description="Personaliza la apariencia de tu catálogo público para compartirlo con tus clientes y vender más."
-            steps={[
-              {
-                title: "Enlace Único (Slug)",
-                description: "Crea una dirección web corta y fácil de recordar (ej. mi-negocio).",
-                icon: LinkIcon
-              },
-              {
-                title: "Personalidad de Marca",
-                description: "Agrega tu logotipo y un banner atrayente para darle un aspecto profesional a tu catálogo.",
-                icon: ImageIcon
-              },
-              {
-                title: "Control de Visibilidad",
-                description: "Activa o desactiva la tienda al instante. Si está desactivada, los clientes no podrán acceder a ella.",
-                icon: Globe
-              }
-            ]}
-          />
+    <div className="space-y-6 max-w-5xl mx-auto pb-20">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Configuración de Tienda</h1>
+            <SectionHelp 
+              title="Tu Catálogo Digital"
+              description="Diseña una experiencia de compra única para tus clientes. Cada cambio que realices se reflejará instantáneamente en tu tienda pública."
+              steps={[
+                { title: "Identidad", description: "Configura tu nombre, logo y enlaces para que te reconozcan.", icon: Store },
+                { title: "Diseño", description: "Personaliza colores, fuentes y estilos para que coincidan con tu marca.", icon: Palette },
+                { title: "Visibilidad", description: "Activa tu tienda cuando estés listo para recibir pedidos.", icon: Globe }
+              ]}
+            />
+          </div>
+          <p className="text-muted-foreground mt-1">Gestiona la identidad visual y funcional de tu comercio online.</p>
         </div>
-        <p className="text-sm text-muted-foreground mt-1">Configura tu catálogo público para tus clientes.</p>
+        
+        <div className="flex gap-3">
+           <Button 
+            variant="outline"
+            className="gap-2 bg-card border-white/5"
+            onClick={() => window.open(publicUrl || '#', '_blank')}
+            disabled={!isPublic || !storeSlug}
+          >
+            <Globe size={18} /> Ver Tienda
+          </Button>
+          <Button 
+            onClick={() => updateProfile.mutate()} 
+            disabled={updateProfile.isPending || uploading}
+            className="gap-2 shadow-lg shadow-primary/20 min-w-[160px]"
+          >
+            {uploading || updateProfile.isPending ? (
+              <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : <Save size={18} />}
+            {uploading || updateProfile.isPending ? 'Guardando...' : 'Guardar Todo'}
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Settings Form */}
-        <div className="md:col-span-2 space-y-6">
-          <div className="bg-card border border-white/5 shadow-xl rounded-2xl p-6 backdrop-blur-xl">
-            <form onSubmit={(e) => { e.preventDefault(); updateProfile.mutate(); }} className="space-y-6">
-              
-              {/* Visibilidad Switch */}
-              <div className="flex items-center justify-between p-4 bg-primary/5 rounded-xl border border-primary/10">
-                <div>
-                  <h3 className="font-semibold text-foreground">Visibilidad Pública</h3>
-                  <p className="text-sm text-muted-foreground">Abre o cierra tu tienda al público general</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className={`text-sm font-medium ${isPublic ? 'text-success' : 'text-muted-foreground'}`}>
-                    {isPublic ? 'Activa' : 'Inactiva'}
-                  </span>
+      <Tabs defaultValue="general" className="w-full space-y-8">
+        <TabsList className="bg-card/50 border border-white/5 p-1 h-auto flex-wrap md:flex-nowrap gap-1 rounded-2xl backdrop-blur-md">
+          <TabsTrigger value="general" className="flex-1 py-2.5 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+            <Store size={16} /> General
+          </TabsTrigger>
+          <TabsTrigger value="appearance" className="flex-1 py-2.5 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+            <Palette size={16} /> Apariencia
+          </TabsTrigger>
+          <TabsTrigger value="carousel" className="flex-1 py-2.5 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+            <Layers size={16} /> Carrusel
+          </TabsTrigger>
+          <TabsTrigger value="channels" className="flex-1 py-2.5 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2">
+            <Search size={16} /> SEO & Canales
+          </TabsTrigger>
+        </TabsList>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            {/* General Tab */}
+            <TabsContent value="general" className="space-y-6 mt-0">
+              <div className="bg-card border border-white/5 shadow-xl rounded-2xl p-6 backdrop-blur-xl space-y-6">
+                <div className="flex items-center justify-between p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-3 h-3 rounded-full animate-pulse ${isPublic ? 'bg-success' : 'bg-muted-foreground'}`} />
+                    <div>
+                      <h3 className="font-semibold text-foreground">Estado de la Tienda</h3>
+                      <p className="text-xs text-muted-foreground">{isPublic ? 'Tu tienda es visible para todo el mundo.' : 'Tu tienda está en modo mantenimiento.'}</p>
+                    </div>
+                  </div>
                   <Switch checked={isPublic} onCheckedChange={setIsPublic} />
                 </div>
-              </div>
 
-              {/* Basic Details */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-foreground/80"><Store size={16} /> Nombre de la Tienda</Label>
-                  <Input 
-                    placeholder="Mi Negocio"
-                    value={businessName}
-                    onChange={(e) => setBusinessName(e.target.value)}
-                    className="bg-white/5 border-white/10 focus-visible:ring-primary"
-                  />
-                  <p className="text-xs text-muted-foreground">Este es el título principal de tu catálogo público.</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-foreground/80"><LinkIcon size={16} /> Enlace Personalizado (Slug)</Label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground bg-white/5 border border-white/10 px-3 py-2 rounded-lg text-sm select-none">
-                      {window.location.hostname}/s/
-                    </span>
-                    <Input 
-                      placeholder="mi-negocio-online"
-                      value={storeSlug}
-                      onChange={(e) => setStoreSlug(e.target.value)}
-                      className="bg-white/5 border-white/10 focus-visible:ring-primary"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">Usa solo minúsculas, números o guiones.</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-foreground/80"><Type size={16} /> Descripción de la Tienda</Label>
-                  <Textarea 
-                    placeholder="¡Bienvenidos a nuestra tienda! Aquí encontrarás los mejores productos..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="bg-white/5 border-white/10 focus-visible:ring-primary min-h-[100px]"
-                  />
-                  <p className="text-xs text-muted-foreground">Un breve mensaje de bienvenida o lema para tus clientes.</p>
-                </div>
-              </div>
-
-                <div className="space-y-4 pt-4 border-t border-white/5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-foreground/80"><MessageCircle size={16} /> Número de WhatsApp</Label>
-                    <Input 
-                      placeholder="+54 9 11 1234-5678"
-                      value={whatsapp}
-                      onChange={(e) => setWhatsapp(e.target.value)}
-                      className="bg-white/5 border-white/10 focus-visible:ring-primary"
-                    />
-                    <p className="text-xs text-muted-foreground">Opcional. Si lo incluyes, el botón de "Contactar" en tu tienda enviará mensajes a este número.</p>
+                    <Label className="text-foreground/80 flex items-center gap-2"><Store size={14} /> Nombre Comercial</Label>
+                    <Input value={businessName} onChange={e => setBusinessName(e.target.value)} className="bg-white/5 border-white/10 h-11" placeholder="Ej: Moda & Estilo" />
                   </div>
+                  <div className="space-y-2">
+                    <Label className="text-foreground/80 flex items-center gap-2"><LinkIcon size={14} /> URL Personalizada</Label>
+                    <div className="flex">
+                      <div className="bg-white/5 border border-r-0 border-white/10 px-3 flex items-center text-xs text-muted-foreground rounded-l-md">/s/</div>
+                      <Input value={storeSlug} onChange={e => setStoreSlug(e.target.value)} className="bg-white/5 border-white/10 h-11 rounded-l-none" placeholder="mi-tienda" />
+                    </div>
+                  </div>
+                </div>
 
+                <div className="space-y-2">
+                  <Label className="text-foreground/80">Descripción de Bienvenida</Label>
+                  <Textarea value={description} onChange={e => setDescription(e.target.value)} className="bg-white/5 border-white/10 min-h-[100px]" placeholder="Cuenta la historia de tu negocio..." />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/5">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2 text-foreground/80"><MessageCircle size={14} /> WhatsApp de Ventas</Label>
+                    <Input value={whatsapp} onChange={e => setWhatsapp(e.target.value)} className="bg-white/5 border-white/10 h-11" placeholder="+54 9 11 ..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2 text-foreground/80"><Mail size={14} /> Email de Contacto</Label>
+                    <Input value={storeEmail} onChange={e => setStoreEmail(e.target.value)} className="bg-white/5 border-white/10 h-11" placeholder="contacto@tuweb.com" />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label className="flex items-center gap-2 text-foreground/80"><MapPin size={14} /> Dirección Física</Label>
+                    <Input value={storeAddress} onChange={e => setStoreAddress(e.target.value)} className="bg-white/5 border-white/10 h-11" placeholder="Calle Ejemplo 123, Ciudad" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t border-white/5">
                   <div className="space-y-3">
-                    <Label className="flex items-center gap-2 text-foreground/80"><Palette size={16} /> Estilo Visual de la Tienda</Label>
-                    <div className="flex items-center gap-4">
-                      <button
-                        type="button"
-                        onClick={() => setTheme('light')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all ${theme === 'light' ? 'border-primary bg-primary/10 text-primary' : 'border-white/5 bg-white/5 text-muted-foreground hover:bg-white/10'}`}
-                      >
-                        <Sun size={20} /> Claro
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setTheme('dark')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all ${theme === 'dark' ? 'border-primary bg-primary/10 text-primary' : 'border-white/5 bg-white/5 text-muted-foreground hover:bg-white/10'}`}
-                      >
-                        <Moon size={20} /> Oscuro
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Rediseño: Personalización Avanzada */}
-                  <div className="space-y-6 pt-6 border-t border-white/5">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Paintbrush size={18} className="text-primary" />
-                      <h3 className="font-semibold text-foreground">Personalización Avanzada</h3>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      <div className="space-y-3 col-span-1 sm:col-span-2">
-                        <Label className="flex items-center gap-2 text-foreground/80">Paletas Recomendadas</Label>
-                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-                          {palettes.map((p) => (
-                            <button
-                              key={p.name}
-                              type="button"
-                              onClick={() => setPrimaryColor(p.color)}
-                              className={`flex flex-col items-center gap-2 p-2 rounded-xl border-2 transition-all ${primaryColor === p.color ? 'border-primary bg-primary/5' : 'border-white/5 bg-white/5 hover:border-white/20'}`}
-                            >
-                              <div className="w-8 h-8 rounded-full shadow-inner" style={{ backgroundColor: p.color }} />
-                              <span className="text-[10px] font-bold uppercase tracking-tighter">{p.name}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2 text-foreground/80">Color Manual</Label>
-                        <div className="flex gap-3">
-                          <input 
-                            type="color" 
-                            value={primaryColor} 
-                            onChange={(e) => setPrimaryColor(e.target.value)}
-                            className="w-12 h-12 rounded-lg cursor-pointer border-0 bg-transparent"
-                          />
-                          <Input 
-                            value={primaryColor}
-                            onChange={(e) => setPrimaryColor(e.target.value)}
-                            placeholder="#FF0000"
-                            className="bg-white/5 border-white/10 uppercase"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2 text-foreground/80">Estilo de Cabecera</Label>
-                        <select 
-                          value={headerStyle}
-                          onChange={(e) => setHeaderStyle(e.target.value)}
-                          className="w-full h-10 px-3 rounded-md border border-white/10 bg-white/5 text-foreground focus:ring-primary"
-                        >
-                          <option value="classic">Clásico (Logo izquierda)</option>
-                          <option value="centered">Centrado (Boutique)</option>
-                          <option value="minimal">Minimalista</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2 text-foreground/80">Texto del Banner (Headline)</Label>
-                      <Input 
-                        value={bannerText}
-                        onChange={(e) => setBannerText(e.target.value)}
-                        placeholder="Ej: Nueva Colección Primavera 2024"
-                        className="bg-white/5 border-white/10"
-                      />
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label className="flex items-center gap-2 text-foreground/80"><Layers size={16} /> Imágenes del Carrusel (Hero)</Label>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        {carouselPreviews.map((preview, index) => (
-                          <div key={index} className="relative aspect-square rounded-xl overflow-hidden border border-white/10 group">
-                            <img src={preview} alt={`Carousel ${index}`} className="w-full h-full object-cover" />
-                            <button 
-                              type="button" 
-                              onClick={() => removeCarouselImage(index)}
-                              className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <X size={12} />
-                            </button>
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const input = document.createElement('input');
-                            input.type = 'file';
-                            input.multiple = true;
-                            input.accept = 'image/*';
-                            input.onchange = (e) => handleCarouselSelect(e as any);
-                            input.click();
-                          }}
-                          className="aspect-square rounded-xl border-2 border-dashed border-white/10 hover:border-primary/40 bg-white/[0.02] hover:bg-white/[0.04] transition-all flex flex-col items-center justify-center gap-2 text-muted-foreground"
-                        >
-                          <Upload size={20} />
-                          <span className="text-xs">Agregar</span>
-                        </button>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Estas imágenes aparecerán en el carrusel principal de tu tienda.</p>
-                    </div>
-                  </div>
-                </div>
-
-              {/* Branding (File Uploads) */}
-              <div className="space-y-6 pt-4 border-t border-white/5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {/* Logo Upload */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-foreground/80"><ImageIcon size={16} /> Logotipo de la Tienda</Label>
+                    <Label className="flex items-center gap-2 text-foreground/80"><ImageIcon size={14} /> Logotipo</Label>
                     <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoSelect} className="hidden" />
                     {logoPreview ? (
-                      <div className="relative w-full aspect-square max-w-[160px] rounded-xl overflow-hidden border border-white/10 bg-black/30">
-                        <img src={logoPreview} alt="Logo preview" className="w-full h-full object-cover" />
-                        <button type="button" onClick={clearLogo} className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors">
-                          <X size={14} />
-                        </button>
+                      <div className="relative group w-32 h-32 rounded-2xl overflow-hidden border border-white/10 bg-black/40">
+                        <img src={logoPreview} className="w-full h-full object-cover" />
+                        <button onClick={clearLogo} className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><X size={20} className="text-white" /></button>
                       </div>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => logoInputRef.current?.click()}
-                        className="w-full aspect-square max-w-[160px] rounded-xl border-2 border-dashed border-white/10 hover:border-primary/40 bg-white/[0.02] hover:bg-white/[0.04] transition-all flex flex-col items-center justify-center gap-2 text-muted-foreground group"
-                      >
-                        <Upload size={22} className="group-hover:text-primary transition-colors" />
-                        <span className="text-sm">Subir Logo</span>
-                        <span className="text-xs opacity-50 text-center px-2">JPG o PNG (máx 5MB)</span>
+                      <button onClick={() => logoInputRef.current?.click()} className="w-32 h-32 rounded-2xl border-2 border-dashed border-white/10 hover:border-primary/40 bg-white/5 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-primary transition-all">
+                        <Upload size={20} /> <span className="text-[10px] font-bold uppercase">Subir</span>
                       </button>
                     )}
                   </div>
-
-                  {/* Banner Upload */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-foreground/80"><ImageIcon size={16} /> Banner Principal</Label>
+                  <div className="space-y-3">
+                    <Label className="flex items-center gap-2 text-foreground/80"><ImageIcon size={14} /> Banner de Fondo</Label>
                     <input ref={bannerInputRef} type="file" accept="image/*" onChange={handleBannerSelect} className="hidden" />
                     {bannerPreview ? (
-                      <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-white/10 bg-black/30">
-                        <img src={bannerPreview} alt="Banner preview" className="w-full h-full object-cover" />
-                        <button type="button" onClick={clearBanner} className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors">
-                          <X size={14} />
-                        </button>
+                      <div className="relative group w-full aspect-video rounded-2xl overflow-hidden border border-white/10 bg-black/40">
+                        <img src={bannerPreview} className="w-full h-full object-cover" />
+                        <button onClick={clearBanner} className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><X size={20} className="text-white" /></button>
                       </div>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => bannerInputRef.current?.click()}
-                        className="w-full aspect-video rounded-xl border-2 border-dashed border-white/10 hover:border-primary/40 bg-white/[0.02] hover:bg-white/[0.04] transition-all flex flex-col items-center justify-center gap-2 text-muted-foreground group"
-                      >
-                        <Upload size={22} className="group-hover:text-primary transition-colors" />
-                        <span className="text-sm">Subir Banner</span>
-                        <span className="text-xs opacity-50 text-center px-2">Aspecto horizontal recomendado (máx 5MB)</span>
+                      <button onClick={() => bannerInputRef.current?.click()} className="w-full aspect-video rounded-2xl border-2 border-dashed border-white/10 hover:border-primary/40 bg-white/5 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-primary transition-all">
+                        <Upload size={24} /> <span className="text-xs font-bold uppercase">Subir Banner</span>
                       </button>
                     )}
                   </div>
                 </div>
               </div>
+            </TabsContent>
 
-              <div className="pt-2">
-                <Button 
-                  type="submit" 
-                  disabled={updateProfile.isPending || uploading}
-                  className="w-full gap-2 shadow-lg shadow-primary/20"
-                >
-                  <Save size={18} />
-                  {uploading || updateProfile.isPending ? 'Guardando Cambios...' : 'Guardar Configuración'}
-                </Button>
+            {/* Appearance Tab */}
+            <TabsContent value="appearance" className="space-y-6 mt-0">
+              <div className="bg-card border border-white/5 shadow-xl rounded-2xl p-6 backdrop-blur-xl space-y-8">
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg flex items-center gap-2"><Palette size={18} className="text-primary" /> Colores y Tema</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button onClick={() => setTheme('light')} className={`flex items-center justify-center gap-2 py-4 rounded-2xl border-2 transition-all ${theme === 'light' ? 'border-primary bg-primary/10 text-primary' : 'border-white/5 bg-white/5 text-muted-foreground'}`}>
+                      <Sun size={20} /> Claro
+                    </button>
+                    <button onClick={() => setTheme('dark')} className={`flex items-center justify-center gap-2 py-4 rounded-2xl border-2 transition-all ${theme === 'dark' ? 'border-primary bg-primary/10 text-primary' : 'border-white/5 bg-white/5 text-muted-foreground'}`}>
+                      <Moon size={20} /> Oscuro
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <Label>Paleta Identitaria</Label>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                      {palettes.map((p) => (
+                        <button key={p.name} onClick={() => setPrimaryColor(p.color)} className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${primaryColor === p.color ? 'border-primary bg-primary/5' : 'border-white/5 bg-white/5'}`}>
+                          <div className="w-8 h-8 rounded-full shadow-inner" style={{ backgroundColor: p.color }} />
+                          <span className="text-[10px] font-bold uppercase tracking-tighter">{p.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t border-white/5">
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-lg flex items-center gap-2"><Type size={18} className="text-primary" /> Tipografía</h3>
+                    <Select value={fontFamily} onValueChange={setFontFamily}>
+                      <SelectTrigger className="bg-white/5 border-white/10 h-11">
+                        <SelectValue placeholder="Selecciona una fuente" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Inter">Inter (Moderna/Limpia)</SelectItem>
+                        <SelectItem value="Outfit">Outfit (Geométrica/Smart)</SelectItem>
+                        <SelectItem value="Playfair Display">Playfair (Elegante/Boutique)</SelectItem>
+                        <SelectItem value="Space Grotesk">Space Grotesk (Tech/Bold)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-lg flex items-center gap-2"><Layout size={18} className="text-primary" /> Redondez (Bordes)</h3>
+                    <div className="flex gap-4">
+                      {['0', 'md', 'xl', 'full'].map((r) => (
+                        <button key={r} onClick={() => setButtonRadius(r)} className={`flex-1 py-3 rounded-xl border-2 transition-all text-sm font-medium ${buttonRadius === r ? 'border-primary bg-primary/10 text-primary' : 'border-white/5 bg-white/5 text-muted-foreground'}`}>
+                          {r === '0' ? 'Agudo' : r === 'full' ? 'Círculo' : r.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-8 border-t border-white/5">
+                  <h3 className="font-semibold text-lg flex items-center gap-2"><Paintbrush size={18} className="text-primary" /> Estilo de Navegación</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {['classic', 'centered', 'minimal'].map((s) => (
+                      <button key={s} onClick={() => setHeaderStyle(s)} className={`p-4 rounded-xl border-2 text-center transition-all ${headerStyle === s ? 'border-primary bg-primary/10 text-primary' : 'border-white/5 bg-white/5 text-muted-foreground'}`}>
+                        <span className="text-xs font-bold uppercase tracking-widest">{s === 'classic' ? 'Clásico' : s === 'centered' ? 'Centrado' : 'Minimal'}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </form>
+            </TabsContent>
+
+            {/* Carousel Tab */}
+            <TabsContent value="carousel" className="space-y-6 mt-0">
+              <div className="bg-card border border-white/5 shadow-xl rounded-2xl p-6 backdrop-blur-xl space-y-8">
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg flex items-center gap-2"><Layers size={18} className="text-primary" /> Imágenes del Carrusel</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {carouselPreviews.map((preview, index) => (
+                      <div key={index} className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 group shadow-lg">
+                        <img src={preview} className="w-full h-full object-cover" />
+                        <button onClick={() => removeCarouselImage(index)} className="absolute top-2 right-2 p-2 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    <input ref={carouselInputRef} type="file" accept="image/*" className="hidden" onChange={handleCarouselSelect} />
+                    <button onClick={() => carouselInputRef.current?.click()} className="aspect-square rounded-2xl border-2 border-dashed border-white/10 hover:border-primary/40 bg-white/5 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-primary transition-all">
+                      <Upload size={24} /> <span className="text-xs font-bold uppercase">Añadir</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t border-white/5">
+                  <div className="space-y-4">
+                    <Label className="text-lg font-semibold">Formato Visual</Label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <button onClick={() => setCarouselRatio('panoramic')} className={`flex flex-col items-center gap-3 p-4 rounded-2xl border-2 transition-all ${carouselRatio === 'panoramic' ? 'border-primary bg-primary/10' : 'border-white/5 bg-white/5'}`}>
+                        <div className="w-full aspect-[21/9] bg-zinc-800 rounded-md border border-white/10 relative overflow-hidden">
+                          <div className="absolute inset-4 bg-primary/20 rounded-sm" />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest">Panorámico (1:1)</span>
+                      </button>
+                      <button onClick={() => setCarouselRatio('square')} className={`flex flex-col items-center gap-3 p-4 rounded-2xl border-2 transition-all ${carouselRatio === 'square' ? 'border-primary bg-primary/10' : 'border-white/5 bg-white/5'}`}>
+                        <div className="w-full aspect-square bg-zinc-800 rounded-md border border-white/10 relative overflow-hidden">
+                          <div className="absolute inset-4 bg-primary/20 rounded-sm" />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest">Cuadrado (3:1)</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <Label className="text-lg font-semibold">Título del Banner</Label>
+                    <Input value={bannerText} onChange={e => setBannerText(e.target.value)} className="bg-white/5 border-white/10 h-11" placeholder="Ej: Nueva Colección 2024" />
+                    <p className="text-xs text-muted-foreground">Este texto aparecerá resaltado sobre las imágenes del carrusel en modo panorámico.</p>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Channels & SEO Tab */}
+            <TabsContent value="channels" className="space-y-6 mt-0">
+              <div className="bg-card border border-white/5 shadow-xl rounded-2xl p-6 backdrop-blur-xl space-y-8">
+                <div className="space-y-6">
+                  <h3 className="font-semibold text-lg flex items-center gap-2"><MessageCircle size={18} className="text-primary" /> Redes Sociales</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2 text-foreground/80"><Instagram size={14} /> Instagram</Label>
+                      <Input value={instagram} onChange={e => setInstagram(e.target.value)} className="bg-white/5 border-white/10" placeholder="@usuario" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2 text-foreground/80"><Facebook size={14} /> Facebook</Label>
+                      <Input value={facebook} onChange={e => setFacebook(e.target.value)} className="bg-white/5 border-white/10" placeholder="Página oficial" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2 text-foreground/80"><Music2 size={14} /> TikTok</Label>
+                      <Input value={tiktok} onChange={e => setTiktok(e.target.value)} className="bg-white/5 border-white/10" placeholder="@usuario" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6 pt-8 border-t border-white/5">
+                  <h3 className="font-semibold text-lg flex items-center gap-2"><Search size={18} className="text-primary" /> SEO (Google & WhatsApp)</h3>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Título para el Buscador</Label>
+                      <Input value={seoTitle} onChange={e => setSeoTitle(e.target.value)} className="bg-white/5 border-white/10" placeholder="Ej: Tienda de Ropa Online - Mejores Precios" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Descripción Meta</Label>
+                      <Textarea value={seoDescription} onChange={e => setSeoDescription(e.target.value)} className="bg-white/5 border-white/10 min-h-[80px]" placeholder="Breve descripción que aparecerá en los resultados de Google..." />
+                    </div>
+                    <div className="p-4 bg-muted/20 rounded-xl border border-white/5 space-y-2 opacity-60">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-primary">Vista Previa Google</p>
+                      <p className="text-blue-400 text-sm font-medium leading-none">{seoTitle || businessName || 'Mi Tienda Online'}</p>
+                      <p className="text-green-500 text-xs">{publicUrl}</p>
+                      <p className="text-muted-foreground text-xs line-clamp-2">{seoDescription || 'Visita nuestra tienda online y descubre los mejores productos.'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+          </div>
+
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-card border border-white/5 shadow-2xl rounded-3xl p-6 backdrop-blur-xl sticky top-24 space-y-6 overflow-hidden">
+               <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-primary/10 blur-3xl rounded-full" />
+               <h3 className="font-bold text-xl flex items-center gap-2 relative z-10"><Globe className="text-primary" /> Tu Ventana al Mundo</h3>
+               
+               {publicUrl ? (
+                 <div className="space-y-4 relative z-10">
+                   <div className="bg-black/30 p-4 rounded-2xl border border-white/10 break-all text-sm font-medium text-primary shadow-inner">
+                     {publicUrl}
+                   </div>
+                   <div className="flex gap-2">
+                     <Button variant="outline" className="flex-1 gap-2 bg-white/5 border-white/10 hover:bg-white/10 h-12 rounded-xl" onClick={copyLink}>
+                       <Copy size={16} /> Link
+                     </Button>
+                     <Button className="flex-1 h-12 rounded-xl shadow-xl shadow-primary/20" asChild disabled={!isPublic}>
+                       {isPublic ? (
+                         <a href={publicUrl} target="_blank" rel="noopener noreferrer">Visitar <Globe size={16} className="ml-2" /></a>
+                       ) : (
+                         <span>Cerrada</span>
+                       )}
+                     </Button>
+                   </div>
+                   
+                   <div className="pt-4 space-y-3">
+                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Resumen del Diseño</p>
+                     <div className="space-y-2">
+                       <div className="flex justify-between text-xs">
+                         <span className="text-muted-foreground">Color Principal:</span>
+                         <div className="flex items-center gap-2 font-mono">{primaryColor} <div className="w-3 h-3 rounded-full" style={{ backgroundColor: primaryColor }} /></div>
+                       </div>
+                       <div className="flex justify-between text-xs">
+                         <span className="text-muted-foreground">Fuente:</span>
+                         <span className="font-medium">{fontFamily}</span>
+                       </div>
+                       <div className="flex justify-between text-xs">
+                         <span className="text-muted-foreground">Botones:</span>
+                         <span className="font-medium underline decoration-primary decoration-2 underline-offset-4">{buttonRadius === '0' ? 'Agudos' : buttonRadius === 'full' ? 'Redondos' : 'Suaves'}</span>
+                       </div>
+                     </div>
+                   </div>
+
+                   {!isPublic && (
+                     <div className="p-4 bg-orange-500/10 rounded-2xl border border-orange-500/20 text-orange-500 text-xs">
+                       <p className="flex items-center gap-2 font-bold mb-1"><Layers size={14} /> MODO MANTENIMIENTO</p>
+                       <p className="opacity-80">Los clientes no pueden ver tus productos hasta que actives la tienda.</p>
+                     </div>
+                   )}
+                 </div>
+               ) : (
+                 <div className="text-center py-10 text-muted-foreground border-2 border-dashed border-white/10 rounded-2xl bg-white/5">
+                   <Search size={32} className="mx-auto mb-3 opacity-20" />
+                   <p className="text-sm px-4">Configura un <strong>Enlace</strong> para empezar.</p>
+                 </div>
+               )}
+            </div>
           </div>
         </div>
+      </Tabs>
 
-        {/* Live Preview / Status Panel */}
-        <div className="md:col-span-1 space-y-6">
-          <div className="bg-card border border-white/5 shadow-xl rounded-2xl p-6 backdrop-blur-xl sticky top-24">
-            <h3 className="font-semibold text-lg mb-4 flex items-center gap-2"><Store className="text-primary" /> Compartir</h3>
-            
-            {publicUrl ? (
-              <div className="space-y-4">
-                <p className="text-sm text-foreground/80">
-                  Invita a tus clientes copiando el enlace a continuación:
-                </p>
-                <div className="bg-black/30 p-3 rounded-lg border border-white/10 break-all text-sm font-medium text-primary select-all">
-                  {publicUrl}
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1 gap-2 bg-white/5 border-white/10" onClick={copyLink}>
-                    <Copy size={16} /> Copiar
-                  </Button>
-                  <Button className="flex-1" asChild disabled={!isPublic}>
-                    {isPublic ? (
-                      <a href={publicUrl} target="_blank" rel="noopener noreferrer">Visitar</a>
-                    ) : (
-                      <span>Visitar</span>
-                    )}
-                  </Button>
-                </div>
-                {!isPublic && (
-                  <p className="text-xs text-warning mt-2 bg-warning/10 p-2 rounded-md border border-warning/20">
-                    Tu tienda está inactiva actualmente. Debes activarla para que el enlace funcione.
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-6 text-muted-foreground border border-dashed border-white/10 rounded-xl bg-white/[0.02]">
-                <p className="text-sm">Configura un <strong>Enlace Personalizado</strong> y guarda para obtener el link de tu tienda.</p>
-              </div>
+      {/* Cropper Dialog */}
+      <Dialog open={isCropping} onOpenChange={setIsCropping}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-zinc-950 border-white/10">
+          <DialogHeader className="p-6 border-b border-white/5">
+            <DialogTitle>Ajustar Imagen del Carrusel</DialogTitle>
+          </DialogHeader>
+          <div className="p-6">
+            {croppingImage && (
+              <ImageCropper 
+                image={croppingImage} 
+                onCropComplete={handleCropComplete}
+                aspect={carouselRatio === 'square' ? 1 : 21/9}
+              />
             )}
           </div>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

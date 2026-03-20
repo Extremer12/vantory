@@ -3,13 +3,20 @@ import { useParams } from 'react-router-dom';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { getOptimizedImageUrl } from '@/lib/image-utils';
-import { Loader2, Search, ShoppingCart, Plus, Minus, Trash2, X as CloseIcon, Heart, ChevronLeft, ChevronRight, MessageCircle, Menu } from 'lucide-react';
+import { 
+  ShoppingBag, Search, ChevronRight, Menu, X, Instagram, Facebook, Music2, 
+  Mail, MapPin, MessageCircle, Phone, ArrowRight, Star, 
+  ArrowLeft, ShoppingCart, Globe, LayoutGrid, List, Check, Store,
+  Minus, Plus, Loader2, Heart, ChevronLeft
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { toast } from 'sonner';
 import Autoplay from 'embla-carousel-autoplay';
+
+const CloseIcon = X;
 
 export default function PublicStorePage() {
   const { slug } = useParams<{ slug: string }>();
@@ -58,7 +65,7 @@ export default function PublicStorePage() {
     setCart(prev => prev.map(item => {
       if (item.product.id === productId && JSON.stringify(item.variants || {}) === JSON.stringify(variants)) {
         const newQ = item.quantity + delta;
-        return { ...item, quantity: newQ > 0 ? newQ : 1 };
+        return { ...item, quantity: newQ > 0 ? newQ : item.quantity };
       }
       return item;
     }));
@@ -129,6 +136,52 @@ export default function PublicStorePage() {
     return matchesSearch && matchesCategory && matchesFavorites;
   }) || [], [products, searchQuery, selectedCategory, showFavorites, favorites]);
 
+  const userTheme = (profile as any)?.store_theme === 'dark' ? 'dark' : 'light';
+  const isDark = userTheme === 'dark';
+  const userPrimaryColor = (profile as any)?.store_primary_color || '#000000';
+  const carouselImages = (profile as any)?.store_carousel_images || [];
+  const carouselRatio = (profile as any)?.store_carousel_ratio || 'panoramic';
+  const bannerText = (profile as any)?.store_banner_text || "Esenciales para el día a día, elevados.";
+  const headerStyle = (profile as any)?.store_header_style || 'classic';
+  const fontFamily = (profile as any)?.store_font_family || 'Inter';
+  const buttonRadius = (profile as any)?.store_button_radius || 'xl';
+  const instagram = (profile as any)?.store_instagram || '';
+  const facebook = (profile as any)?.store_facebook || '';
+  const tiktok = (profile as any)?.store_tiktok || '';
+  const storeEmail = (profile as any)?.store_email || '';
+  const storeAddress = (profile as any)?.store_address || '';
+  const seoTitle = (profile as any)?.store_seo_title || '';
+  const seoDescription = (profile as any)?.store_seo_description || '';
+
+  useEffect(() => {
+    if (profile) {
+      document.title = seoTitle || (profile as any).business_name || 'Tienda Online';
+      let metaDesc = document.querySelector('meta[name="description"]');
+      if (!metaDesc) {
+        metaDesc = document.createElement('meta');
+        metaDesc.setAttribute('name', 'description');
+        document.head.appendChild(metaDesc);
+      }
+      metaDesc.setAttribute('content', seoDescription || (profile as any).store_description || 'Bienvenido a nuestra tienda online.');
+    }
+  }, [profile, seoTitle, seoDescription]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--primary', userPrimaryColor);
+    const radiusMap: Record<string, string> = { '0': '0px', 'md': '0.375rem', 'xl': '0.75rem', 'full': '9999px' };
+    document.documentElement.style.setProperty('--radius', radiusMap[buttonRadius] || '0.75rem');
+
+    if (fontFamily !== 'Inter') {
+       const link = document.createElement('link');
+       link.href = `https://fonts.googleapis.com/css2?family=${fontFamily.replace(' ', '+')}:wght@400;500;600;700;800;900&display=swap`;
+       link.rel = 'stylesheet';
+       document.head.appendChild(link);
+       document.documentElement.style.setProperty('--font-family', `'${fontFamily}', sans-serif`);
+    } else {
+       document.documentElement.style.setProperty('--font-family', 'var(--font-sans)');
+    }
+  }, [userPrimaryColor, buttonRadius, fontFamily]);
+
   if (isProfileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white text-zinc-900">
@@ -146,13 +199,6 @@ export default function PublicStorePage() {
     );
   }
 
-  const themeTheme = (profile as any)?.store_theme === 'dark' ? 'dark' : 'light';
-  const isDark = themeTheme === 'dark';
-  const userPrimaryColor = (profile as any)?.store_primary_color || '#000000';
-  const carouselImages = (profile as any)?.store_carousel_images || [];
-  const headerStyle = (profile as any)?.store_header_style || 'classic';
-  const bannerText = (profile as any)?.store_banner_text || "Esenciales para el día a día, elevados.";
-  
   const colors = {
     bg: isDark ? 'bg-[#0a0a0a]' : 'bg-[#fafafa]',
     text: isDark ? 'text-zinc-100' : 'text-zinc-900',
@@ -191,8 +237,8 @@ export default function PublicStorePage() {
                 <p className="text-sm tracking-widest uppercase">Tu bolsa está vacía.</p>
               </div>
             ) : (
-              cart.map((item) => (
-                <div key={item.product.id} className="flex gap-6 group">
+              cart.map((item, idx) => (
+                <div key={idx} className="flex gap-6 group">
                   <div className={`w-24 h-28 ${colors.card} bg-opacity-50 overflow-hidden flex items-center justify-center border ${colors.border} rounded-xl shadow-sm group-hover:shadow-md transition-shadow`}>
                     {item.product.image_url && <img src={item.product.image_url} alt={item.product.name} className="w-full h-full object-cover" />}
                   </div>
@@ -286,7 +332,6 @@ export default function PublicStorePage() {
       );
     }
 
-    // Default 'classic'
     return (
       <header className={`sticky top-0 z-50 w-full backdrop-blur-3xl bg-opacity-70 border-b ${colors.border} px-6 md:px-20 py-6 flex items-center justify-between ${colors.bg}`}>
         <div className="flex items-center gap-12">
@@ -299,22 +344,23 @@ export default function PublicStorePage() {
   };
 
   return (
-    <div className={`min-h-screen ${colors.bg} ${colors.text} font-sans selection:bg-zinc-300 selection:text-black transition-colors duration-300`}>
+    <div className="min-h-screen transition-colors duration-500 pb-20 overflow-x-hidden" style={{ 
+      backgroundColor: isDark ? '#000000' : '#f8fafc',
+      fontFamily: 'var(--font-family)'
+    }}>
       <style>{`
         :root {
           --primary: ${userPrimaryColor};
           --primary-foreground: ${isDark ? '#000000' : '#ffffff'};
+          --radius: var(--button-radius);
         }
         .bg-primary { background-color: var(--primary) !important; }
         .text-primary { color: var(--primary) !important; }
         .border-primary { border-color: var(--primary) !important; }
-        .selection\\:bg-primary::selection { background-color: var(--primary) !important; }
-        .shadow-primary\\/20 { shadow-color: rgba(0,0,0,0.2) !important; }
       `}</style>
 
       {renderHeader()}
 
-      {/* Mobile Search Overlay */}
       <div className={`md:hidden px-6 py-6 border-b ${colors.border} ${isDark ? 'bg-zinc-900/10' : 'bg-zinc-50/30'}`}>
         <div className={`flex items-center border-b ${colors.border} pb-2 focus-within:border-zinc-500 transition-all`}>
           <Search className={`w-4 h-4 mr-3 ${colors.textMuted}`} />
@@ -330,22 +376,26 @@ export default function PublicStorePage() {
 
       <main className="max-w-[1700px] mx-auto px-6 md:px-16 py-12 md:py-20 animate-in fade-in slide-in-from-bottom-4 duration-1000">
         
-        {/* Dynamic Hero Carousel / Striking Banner */}
         {carouselImages.length > 0 ? (
           <div className="mb-24 relative group">
-            <Carousel 
-              opts={{ loop: true }} 
-              plugins={[Autoplay({ delay: 5000 })]}
-              className="w-full h-[250px] md:h-[400px] rounded-[2rem] overflow-hidden border border-white/10 shadow-3xl"
+            <Carousel opts={{ loop: true, align: 'start' }} plugins={[Autoplay({ delay: 5000 })]}
+              className={`w-full ${carouselRatio === 'square' ? 'h-[250px] md:h-[450px]' : 'h-[200px] md:h-[300px]'} rounded-[2rem] overflow-hidden border border-white/10 shadow-3xl transition-all duration-700`}
             >
-              <CarouselContent className="h-full">
+              <CarouselContent className="h-full -ml-4">
                 {carouselImages.map((img: string, idx: number) => (
-                  <CarouselItem key={idx} className="h-full relative">
-                    <img src={img} alt={`Banner ${idx}`} className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col items-center justify-end p-12 md:p-24 text-center">
-                       <h2 className="text-4xl md:text-7xl font-black text-white tracking-tighter uppercase mb-4 max-w-4xl drop-shadow-2xl">
-                        {bannerText}
-                       </h2>
+                  <CarouselItem key={idx} className={`h-full relative pl-4 ${carouselRatio === 'square' ? 'basis-1/2 md:basis-1/3' : 'basis-full'}`}>
+                    <div className="relative h-full w-full rounded-2xl overflow-hidden group/item shadow-lg border border-white/5">
+                      {carouselRatio === 'panoramic' && (
+                        <div className="absolute inset-0 z-0">
+                          <img src={img} alt="" className="w-full h-full object-cover blur-3xl opacity-40 scale-125" />
+                        </div>
+                      )}
+                      <img src={img} alt={`Banner ${idx}`} className={`relative z-10 w-full h-full object-cover transition-transform duration-1000 group-hover/item:scale-105`} />
+                      {carouselRatio === 'panoramic' && (
+                        <div className="absolute inset-0 z-20 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col items-center justify-end p-8 md:p-16 text-center">
+                           <h2 className="text-2xl md:text-5xl font-black text-white tracking-tighter uppercase mb-2 max-w-4xl drop-shadow-2xl">{bannerText}</h2>
+                        </div>
+                      )}
                     </div>
                   </CarouselItem>
                 ))}
@@ -355,61 +405,38 @@ export default function PublicStorePage() {
                 <CarouselNext className="static h-12 w-12 bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20 translate-x-0" />
               </div>
             </Carousel>
-            
-            {/* Visual Glow behind carousel */}
             <div className="absolute -inset-4 bg-primary/20 blur-[100px] -z-10 opacity-30" />
           </div>
         ) : (
-          /* Fallback Elegant Banner */
           <div className="mb-24 md:mb-32 text-center max-w-4xl mx-auto space-y-10 relative py-20">
             <div className="relative z-10">
-              <div className="inline-block px-5 py-2 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.4em] mb-8 border border-primary/20 backdrop-blur-md">
-                Bienvenido a nuestra curaduría
-              </div>
-              <h1 className="text-5xl md:text-8xl font-black tracking-tighter leading-[0.85] mb-10 uppercase text-balance">
-                {bannerText}
-              </h1>
+              <div className="inline-block px-5 py-2 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.4em] mb-8 border border-primary/20 backdrop-blur-md">Bienvenido</div>
+              <h1 className="text-5xl md:text-8xl font-black tracking-tighter leading-[0.85] mb-10 uppercase text-balance">{bannerText}</h1>
               <div className="h-1.5 w-24 bg-primary mx-auto rounded-full shadow-[0_0_20px_var(--primary)]" />
             </div>
-            
-            {/* Ambient Glows */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-primary/5 blur-[120px] -z-10 rounded-full" />
           </div>
         )}
 
-        {/* Navigation Tabs (Text-based) */}
         {categories.length > 0 && (
           <div className={`flex items-center justify-center gap-8 md:gap-14 overflow-x-auto pb-6 scrollbar-hide mb-16 text-[11px] font-bold uppercase tracking-[0.2em] ${colors.textMuted}`}>
-            <button
-              onClick={() => { setSelectedCategory(null); setShowFavorites(false); }}
+            <button onClick={() => { setSelectedCategory(null); setShowFavorites(false); }}
               className={`pb-2 border-b-2 transition-all whitespace-nowrap ${selectedCategory === null && !showFavorites ? `text-primary border-primary` : 'border-transparent hover:text-zinc-400'}`}
-            >
-              Colección Completa
-            </button>
-            <button
-              onClick={() => { setSelectedCategory(null); setShowFavorites(true); }}
+            >Colección Completa</button>
+            <button onClick={() => { setSelectedCategory(null); setShowFavorites(true); }}
               className={`pb-2 border-b-2 transition-all whitespace-nowrap flex items-center gap-2 ${showFavorites ? `text-primary border-primary` : 'border-transparent hover:text-zinc-400'}`}
-            >
-              <Heart size={14} className={showFavorites ? "fill-current text-primary" : ""} /> Favoritos
-            </button>
+            ><Heart size={14} className={showFavorites ? "fill-current text-primary" : ""} /> Favoritos</button>
             {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => { setSelectedCategory(cat); setShowFavorites(false); }}
+              <button key={cat} onClick={() => { setSelectedCategory(cat); setShowFavorites(false); }}
                 className={`pb-2 border-b-2 transition-all whitespace-nowrap ${selectedCategory === cat && !showFavorites ? `text-primary border-primary` : 'border-transparent hover:text-zinc-400'}`}
-              >
-                {cat}
-              </button>
+              >{cat}</button>
             ))}
           </div>
         )}
 
-        {/* Product Grid - EXACT INVENTORY STYLE: rounded-2xl, bg-card, border-white/5, aspect-square, object-cover */}
         {isProductsLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 md:gap-8">
-            {[...Array(10)].map((_, i) => (
-              <div key={i} className={`aspect-square animate-pulse bg-zinc-500/5 rounded-2xl`} />
-            ))}
+            {[...Array(10)].map((_, i) => ( <div key={i} className={`aspect-square animate-pulse bg-zinc-500/5 rounded-2xl`} /> ))}
           </div>
         ) : filteredProducts && filteredProducts.length > 0 ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-16 md:gap-x-10 md:gap-y-20">
@@ -417,43 +444,22 @@ export default function PublicStorePage() {
               const outOfStock = !p.current_stock || p.current_stock === 0;
               return (
                 <div key={p.id} className="group relative flex flex-col cursor-pointer" onClick={() => { setSelectedProduct(p); setCurrentImageIndex(0); setSelectedVariants({}); }}>
-                  {/* Container: Rounded 2xl as in Inventory */}
                   <div className={`relative aspect-square w-full mb-6 overflow-hidden bg-card border border-white/5 rounded-2xl shadow-sm hover:shadow-2xl hover:border-primary/20 transition-all duration-500 ease-out`}>
-                    <button
-                      onClick={(e) => toggleFavorite(p.id, e)}
-                      className="absolute top-4 right-4 z-20 p-2.5 rounded-full bg-black/20 backdrop-blur-md text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
-                    >
+                    <button onClick={(e) => toggleFavorite(p.id, e)} className="absolute top-4 right-4 z-20 p-2.5 rounded-full bg-black/20 backdrop-blur-md text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110">
                       <Heart size={16} className={favorites.includes(p.id) ? 'fill-primary text-primary' : ''} />
                     </button>
-
-                    {(p as any).image_url && (
-                      <img 
-                        src={getOptimizedImageUrl((p as any).image_url, { width: 600, quality: 90 })} 
-                        alt={p.name}
-                        loading="lazy"
-                        className={`w-full h-full object-cover transition-opacity duration-500 ${outOfStock ? 'opacity-40' : 'group-hover:opacity-95'}`} 
-                      />
+                    {p.product_images?.[0]?.image_url ? (
+                      <img src={getOptimizedImageUrl(p.product_images[0].image_url, { width: 600, quality: 90 })} alt={p.name} loading="lazy" className={`w-full h-full object-cover transition-opacity duration-500 ${outOfStock ? 'opacity-40' : 'group-hover:opacity-95'}`} />
+                    ) : (p as any).image_url && (
+                      <img src={getOptimizedImageUrl((p as any).image_url, { width: 600, quality: 90 })} alt={p.name} loading="lazy" className={`w-full h-full object-cover transition-opacity duration-500 ${outOfStock ? 'opacity-40' : 'group-hover:opacity-95'}`} />
                     )}
-                    
-                    {outOfStock && (
-                      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
-                        <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white bg-black/60 px-4 py-2 border border-white/10">Agotado</span>
-                      </div>
-                    )}
-
-                    {/* Quick Add Overlay */}
+                    {outOfStock && ( <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center"> <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white bg-black/60 px-4 py-2 border border-white/10">Agotado</span> </div> )}
                     {!outOfStock && (
                       <div className="absolute inset-x-0 bottom-0 p-6 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0 flex flex-col gap-2">
-                        <Button 
-                          onClick={(e) => { e.stopPropagation(); addToCart(p); toast.success('Añadido a la bolsa'); }}
-                          className={`w-full rounded-xl bg-primary text-primary-foreground text-[10px] font-black tracking-widest uppercase h-11 hover:opacity-90 transition-all shadow-2xl shadow-primary/20`}
-                        >
-                          Añadir rápido
-                        </Button>
+                        <Button onClick={(e) => { e.stopPropagation(); addToCart(p); toast.success('Añadido a la bolsa'); }} className={`w-full rounded-xl bg-primary text-primary-foreground text-[10px] font-black tracking-widest uppercase h-11 hover:opacity-90 transition-all shadow-2xl shadow-primary/20`}>Añadir rápido</Button>
                       </div>
                     )}
                   </div>
-                  
                   <div className="space-y-2">
                      <div className="flex items-center justify-between">
                         <h3 className={`text-xs md:text-[13px] font-bold uppercase tracking-[0.1em] ${colors.text}`}>{p.name}</h3>
@@ -471,94 +477,126 @@ export default function PublicStorePage() {
               <Search size={24} className="opacity-30" />
             </div>
             <p className={`text-xl font-light tracking-wide ${colors.textMuted}`}>No se encontraron piezas en esta curaduría.</p>
-            <button onClick={() => { setSearchQuery(''); setSelectedCategory(null); setShowFavorites(false); }} className={`px-8 py-3 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-xs font-bold tracking-[0.3em] uppercase hover:opacity-80 transition-opacity`}>
-              Limpiar filtros
-            </button>
+            <button onClick={() => { setSearchQuery(''); setSelectedCategory(null); setShowFavorites(false); }} className={`px-8 py-3 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-black text-xs font-bold tracking-[0.3em] uppercase hover:opacity-80 transition-opacity`}>Limpiar filtros</button>
           </div>
         )}
 
         {hasNextPage && !searchQuery && !selectedCategory && (
           <div className="flex justify-center mt-32">
             <button onClick={() => fetchNextPage()} disabled={isFetchingNextPage} className={`px-10 py-4 border border-zinc-500/20 text-[11px] font-black tracking-[0.4em] uppercase hover:bg-zinc-500/5 transition-colors ${colors.text}`}>
-              {isFetchingNextPage ? 'Buscando más...' : 'Ver más productos'}
+              {isFetchingNextPage ? 'Cargando...' : 'Ver más productos'}
             </button>
           </div>
         )}
       </main>
 
-      {/* Footer Zion Code */}
-      <footer className={`mt-20 py-16 border-t ${colors.border} text-center space-y-6 max-w-[1700px] mx-auto px-6`}>
-        <div className="flex flex-col items-center gap-3">
-          <div className={`text-xl font-black tracking-tighter uppercase italic ${colors.text}`}>Ventory</div>
-        </div>
-        <p className={`text-[10px] font-bold uppercase tracking-[0.3em] ${colors.textMuted} opacity-70`}>
-          Desarrollado por <span className="text-primary hover:underline cursor-pointer">Zion Code</span>
-        </p>
-        <div className="pt-6 flex items-center justify-center gap-4 opacity-20">
-          <div className={`w-8 h-[1px] ${isDark ? 'bg-white' : 'bg-black'}`} />
-          <span className="text-[9px] font-black uppercase tracking-[0.5em]">MMXXVI</span>
-          <div className={`w-8 h-[1px] ${isDark ? 'bg-white' : 'bg-black'}`} />
+      <footer className={`mt-40 bg-card border-t ${colors.border} pt-24 pb-12`}>
+        <div className="max-w-[1700px] mx-auto px-6 md:px-16">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-20 mb-24">
+            <div className="lg:col-span-2 space-y-10">
+              <h4 className="text-3xl font-black tracking-tighter uppercase italic flex items-center gap-3">
+                <Store size={32} className="text-primary" />
+                {profile.business_name}
+              </h4>
+              <p className="max-w-md text-base leading-relaxed text-muted-foreground">
+                {(profile as any).store_description || "Descubre nuestra selección exclusiva de productos diseñados para elevar tu estilo de vida."}
+              </p>
+              <div className="flex gap-6 items-center">
+                {instagram && (
+                  <a href={`https://instagram.com/${instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-full border border-white/5 bg-white/[0.03] flex items-center justify-center hover:bg-primary/20 hover:border-primary/40 transition-all text-muted-foreground hover:text-primary">
+                    <Instagram size={20} />
+                  </a>
+                )}
+                {facebook && (
+                  <a href={`https://facebook.com/${facebook}`} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-full border border-white/5 bg-white/[0.03] flex items-center justify-center hover:bg-primary/20 hover:border-primary/40 transition-all text-muted-foreground hover:text-primary">
+                    <Facebook size={20} />
+                  </a>
+                )}
+                {tiktok && (
+                  <a href={`https://tiktok.com/@${tiktok.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-full border border-white/5 bg-white/[0.03] flex items-center justify-center hover:bg-primary/20 hover:border-primary/40 transition-all text-muted-foreground hover:text-primary">
+                    <Music2 size={20} />
+                  </a>
+                )}
+              </div>
+            </div>
+            
+            <div className="space-y-8">
+              <h5 className="text-[11px] font-black uppercase tracking-[0.4em] text-primary">Información</h5>
+              <ul className="space-y-4 text-sm font-medium text-muted-foreground italic">
+                <li className="hover:text-primary cursor-pointer transition-colors">Cómo comprar</li>
+                <li className="hover:text-primary cursor-pointer transition-colors">Envíos y Retiros</li>
+                <li className="hover:text-primary cursor-pointer transition-colors">Preguntas Frecuentes</li>
+              </ul>
+            </div>
+
+            <div className="space-y-8">
+              <h5 className="text-[11px] font-black uppercase tracking-[0.4em] text-primary">Contacto</h5>
+              <ul className="space-y-5 text-sm font-medium text-muted-foreground">
+                {(profile as any).store_whatsapp && (
+                  <li className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500 shrink-0"><Phone size={18} /></div>
+                    <div><p className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-1">WhatsApp</p><span>{(profile as any).store_whatsapp}</span></div>
+                  </li>
+                )}
+                {storeEmail && (
+                  <li className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 shrink-0"><Mail size={18} /></div>
+                    <div><p className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-1">Email</p><span>{storeEmail}</span></div>
+                  </li>
+                )}
+                {storeAddress && (
+                  <li className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 shrink-0"><MapPin size={18} /></div>
+                    <div><p className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-1">Ubicación</p><span>{storeAddress}</span></div>
+                  </li>
+                )}
+              </ul>
+            </div>
+          </div>
+
+          <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40">© 2026 {profile.business_name} — Todos los derechos reservados</p>
+            <div className="flex items-center gap-3">
+              <span className="text-[9px] font-black uppercase tracking-[0.5em] opacity-30">Desarrollado por</span>
+              <span className="text-[11px] font-black tracking-tighter uppercase italic text-primary hover:scale-110 transition-transform cursor-pointer">Zion Code</span>
+            </div>
+          </div>
         </div>
       </footer>
 
-      {/* Extra Clean Product Modal */}
       <Dialog open={!!selectedProduct} onOpenChange={(v) => !v && setSelectedProduct(null)}>
-        <DialogContent className={`w-full max-w-7xl h-[100dvh] sm:h-[90vh] p-0 overflow-hidden border border-white/10 rounded-3xl shadow-3xl ${colors.bg}`}>
+        <DialogContent className={`w-full max-w-7xl h-[100dvh] sm:h-[90vh] p-0 overflow-hidden border border-white/10 rounded-3xl shadow-3xl ${isDark ? 'bg-zinc-950/40 backdrop-blur-3xl' : 'bg-white/80 backdrop-blur-3xl'} [&>button]:hidden`}>
           <DialogTitle className="sr-only">{selectedProduct?.name}</DialogTitle>
           {selectedProduct && (
             <div className="flex flex-col lg:flex-row h-full w-full">
-              
               <div className={`relative w-full lg:w-[55%] h-1/2 lg:h-full flex items-center justify-center overflow-hidden bg-zinc-50/5 group/modalimg border-r border-white/5`}>
-                 <img
-                    key={currentImageIndex}
-                    src={(() => {
-                      const allImages = [selectedProduct.image_url, ...(selectedProduct.product_images || []).map((i: any) => i.image_url)].filter(Boolean);
-                      return allImages[currentImageIndex] || selectedProduct.image_url;
-                    })()}
-                    className="w-full h-full object-cover transition-opacity duration-300"
-                    alt={selectedProduct.name}
-                  />
-
+                 <img src={(() => {
+                   const allImages = [selectedProduct.image_url, ...(selectedProduct.product_images || []).map((i: any) => i.image_url)].filter(Boolean);
+                   return allImages[currentImageIndex] || selectedProduct.image_url;
+                 })()} className="w-full h-full object-cover transition-opacity duration-300" alt={selectedProduct.name} />
                 {(() => {
                   const allImages = [selectedProduct.image_url, ...(selectedProduct.product_images || []).map((i: any) => i.image_url)].filter(Boolean);
                   if (allImages.length <= 1) return null;
                   return (
                     <div className="absolute inset-x-0 bottom-8 flex justify-center gap-4 px-6 opacity-0 group-hover/modalimg:opacity-100 transition-opacity">
-                      <button onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(prev => (prev === 0 ? allImages.length - 1 : prev - 1)); }} className={`w-12 h-12 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all`}>
-                        <ChevronLeft size={20} />
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(prev => (prev === allImages.length - 1 ? 0 : prev + 1)); }} className={`w-12 h-12 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all`}>
-                        <ChevronRight size={20} />
-                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(prev => (prev === 0 ? allImages.length - 1 : prev - 1)); }} className={`w-12 h-12 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all`}><ChevronLeft size={20} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(prev => (prev === allImages.length - 1 ? 0 : prev + 1)); }} className={`w-12 h-12 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all`}><ChevronRight size={20} /></button>
                     </div>
                   );
                 })()}
               </div>
 
-              <div className="flex-1 flex flex-col h-1/2 lg:h-full relative overflow-y-auto custom-scrollbar bg-card/10">
-                <button onClick={() => setSelectedProduct(null)} className={`absolute top-8 right-8 z-20 p-2 rounded-full bg-zinc-500/10 hover:bg-zinc-500/20 transition-colors`}>
-                  <CloseIcon size={20} strokeWidth={2} />
-                </button>
-                
+              <div className="flex-1 flex flex-col h-1/2 lg:h-full relative overflow-y-auto custom-scrollbar bg-white/[0.02]">
+                <button onClick={() => setSelectedProduct(null)} className={`absolute top-6 right-6 z-20 p-3 rounded-full ${isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-black/5 hover:bg-black/10'} backdrop-blur-md transition-all border border-white/10 active:scale-90`}><X size={22} strokeWidth={2.5} /></button>
                 <div className="p-10 md:p-20 flex-col flex h-full">
                   <div className="mb-12">
                     {selectedProduct.categories?.name && (
-                      <div className="flex items-center gap-4 mb-6">
-                         <div className="h-[1px] w-8 bg-primary" />
-                         <p className="text-[11px] font-black uppercase tracking-[0.4em] text-primary">
-                          {selectedProduct.categories.name}
-                        </p>
-                      </div>
+                      <div className="flex items-center gap-4 mb-6"><div className="h-[1px] w-8 bg-primary" /><p className="text-[11px] font-black uppercase tracking-[0.4em] text-primary">{selectedProduct.categories.name}</p></div>
                     )}
-                    <h2 className={`text-4xl md:text-7xl font-black tracking-tighter mb-8 leading-[0.9] uppercase ${colors.text}`}>
-                      {selectedProduct.name}
-                    </h2>
-                    <p className={`text-3xl font-mono text-primary font-black`}>
-                      ${(Number(selectedProduct.sale_price) + Object.values(selectedVariants).reduce((s: number, v: any) => s + (Number(v.price_adjustment) || 0), 0)).toFixed(2)}
-                    </p>
+                    <h2 className={`text-4xl md:text-7xl font-black tracking-tighter mb-8 leading-[0.9] uppercase ${colors.text}`}>{selectedProduct.name}</h2>
+                    <p className={`text-3xl font-mono text-primary font-black`}>${(Number(selectedProduct.sale_price) + Object.values(selectedVariants).reduce((s: number, v: any) => s + (Number(v.price_adjustment) || 0), 0)).toFixed(2)}</p>
                   </div>
 
-                  {/* Variants */}
                   {selectedProduct.product_variants && selectedProduct.product_variants.length > 0 && (
                     <div className="mb-14 space-y-8">
                       {Array.from(new Set(selectedProduct.product_variants.map((v: any) => v.variant_label))).map((label: any) => {
@@ -571,20 +609,9 @@ export default function PublicStorePage() {
                                  const isSelected = selectedVariants[label]?.id === v.id;
                                  const outOfStock = v.stock === 0;
                                  return (
-                                   <button
-                                     key={v.id}
-                                     disabled={outOfStock}
-                                     onClick={() => setSelectedVariants(prev => ({ ...prev, [label]: v }))}
-                                     className={`px-6 py-3 text-xs font-bold tracking-widest border transition-all ${
-                                       isSelected 
-                                         ? `border-primary bg-primary text-primary-foreground scale-105 shadow-xl`
-                                         : outOfStock 
-                                           ? `opacity-20 cursor-not-allowed border-zinc-500/20`
-                                           : `border-zinc-500/30 hover:border-zinc-500`
-                                     }`}
-                                   >
-                                     {v.variant_value}
-                                   </button>
+                                   <button key={v.id} disabled={outOfStock} onClick={() => setSelectedVariants(prev => ({ ...prev, [label]: v }))}
+                                     className={`px-6 py-3 text-xs font-bold tracking-widest border transition-all ${isSelected ? `border-primary bg-primary text-primary-foreground scale-105 shadow-xl` : outOfStock ? `opacity-20 cursor-not-allowed border-zinc-500/20` : `border-zinc-500/30 hover:border-zinc-500`}`}
+                                   >{v.variant_value}</button>
                                  );
                                })}
                              </div>
@@ -594,13 +621,9 @@ export default function PublicStorePage() {
                     </div>
                   )}
 
-                  <div className={`text-base md:text-lg leading-relaxed mb-16 font-light ${colors.textMuted} max-w-xl`}>
-                    {selectedProduct.description || "Esta pieza está disponible para tu curaduría personal. Consulta detalles adicionales bajo solicitud."}
-                  </div>
-
+                  <div className={`text-base md:text-lg leading-relaxed mb-16 font-light ${colors.textMuted} max-w-xl`}>{selectedProduct.description || "Esta pieza está disponible para tu curaduría personal. Consulta detalles adicionales bajo solicitud."}</div>
                   <div className="mt-auto pt-10 border-t border-zinc-500/10 space-y-6">
-                    <Button 
-                      onClick={() => {
+                    <Button onClick={() => {
                         const requiredLabels = Array.from(new Set((selectedProduct.product_variants || []).map((v: any) => v.variant_label))) as string[];
                         const missing = requiredLabels.filter(label => !selectedVariants[label]);
                         if (missing.length > 0) { toast.error(`Por favor selecciona: ${missing.join(', ')}`); return; }
@@ -608,22 +631,15 @@ export default function PublicStorePage() {
                         toast.success('Añadido a la bolsa');
                       }}
                       className={`w-full h-16 rounded-2xl text-[11px] tracking-[0.4em] uppercase font-black ${colors.btnBg} ${colors.btnText} hover:opacity-90 transition-all shadow-2xl shadow-black/20`}
-                    >
-                      Añadir a la bolsa
-                    </Button>
+                    >Añadir a la bolsa</Button>
                     <button onClick={() => {
                         const wnumber = profile.store_whatsapp ? profile.store_whatsapp.replace(/\D/g, '') : '';
                         const baseUrl = wnumber ? `https://wa.me/${wnumber}` : `https://wa.me/`;
                         const variantText = Object.keys(selectedVariants).length > 0 ? ` (${Object.values(selectedVariants).map((v: any) => v.variant_value).join(', ')})` : '';
                         const text = `¡Hola! Me interesa esta pieza única: *${selectedProduct.name}${variantText}*. ¿Podrían darme más información?`;
                         window.open(`${baseUrl}?text=${encodeURIComponent(text)}`, '_blank');
-                      }} 
-                      className={`w-full text-center text-[10px] tracking-[0.3em] font-black uppercase underline underline-offset-8 decoration-2 decoration-primary/40 hover:decoration-primary ${colors.textMuted} hover:${colors.text} transition-all`}
-                    >
-                      Consultar por WhatsApp
-                    </button>
+                      }} className={`w-full text-center text-[10px] tracking-[0.3em] font-black uppercase underline underline-offset-8 decoration-2 decoration-primary/40 hover:decoration-primary ${colors.textMuted} hover:${colors.text} transition-all`}>Consultar por WhatsApp</button>
                   </div>
-
                 </div>
               </div>
             </div>
