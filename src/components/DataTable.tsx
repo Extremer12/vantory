@@ -27,6 +27,7 @@ interface DataTableProps<TData, TValue> {
   pageSize?: number
   onPageChange?: (page: number) => void
   onPageSizeChange?: (size: number) => void
+  onSearchChange?: (value: string) => void
 }
 
 export function DataTable<TData, TValue>({
@@ -39,6 +40,7 @@ export function DataTable<TData, TValue>({
   pageSize,
   onPageChange,
   onPageSizeChange,
+  onSearchChange,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -88,6 +90,7 @@ export function DataTable<TData, TValue>({
                 table.getColumn(searchColumn)?.setFilterValue(event.target.value)
               } else {
                 setGlobalFilter(String(event.target.value))
+                onSearchChange?.(String(event.target.value))
               }
             }}
             className="pl-9 h-10 bg-background/50 border-white/10 focus:border-primary/50 transition-colors"

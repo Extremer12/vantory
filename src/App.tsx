@@ -5,16 +5,18 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import AppLayout from "@/components/AppLayout";
-import AuthPage from "@/pages/Auth";
-import DashboardPage from "@/pages/Dashboard";
-import InventoryPage from "@/pages/Inventory";
-import TransactionsPage from "@/pages/Transactions";
-import POSPage from "@/pages/POS";
-import CalculatorPage from "@/pages/Calculator";
-import StoreSettingsPage from "@/pages/StoreSettings";
-import CategoriesPage from "@/pages/Categories";
-import PublicStorePage from "@/pages/PublicStore";
+import { lazy, Suspense } from "react";
+import AuthPage from "@/pages/Auth"; // Keep auth non-lazy or lazy as needed, but usually kept static if it's the entry. Let's lazy load it.
 import NotFound from "@/pages/NotFound";
+
+const DashboardPage = lazy(() => import("@/pages/Dashboard"));
+const InventoryPage = lazy(() => import("@/pages/Inventory"));
+const TransactionsPage = lazy(() => import("@/pages/Transactions"));
+const POSPage = lazy(() => import("@/pages/POS"));
+const CalculatorPage = lazy(() => import("@/pages/Calculator"));
+const StoreSettingsPage = lazy(() => import("@/pages/StoreSettings"));
+const CategoriesPage = lazy(() => import("@/pages/Categories"));
+const PublicStorePage = lazy(() => import("@/pages/PublicStore"));
 
 const queryClient = new QueryClient();
 
@@ -42,18 +44,20 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/s/:slug" element={<PublicStorePage />} />
-            <Route path="/auth" element={<AuthRoute />} />
-            <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-            <Route path="/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
-            <Route path="/transactions" element={<ProtectedRoute><TransactionsPage /></ProtectedRoute>} />
-            <Route path="/pos" element={<ProtectedRoute><POSPage /></ProtectedRoute>} />
-            <Route path="/store-config" element={<ProtectedRoute><StoreSettingsPage /></ProtectedRoute>} />
-            <Route path="/categories" element={<ProtectedRoute><CategoriesPage /></ProtectedRoute>} />
-            <Route path="/calculator" element={<ProtectedRoute><CalculatorPage /></ProtectedRoute>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-muted-foreground">Cargando...</div>}>
+            <Routes>
+              <Route path="/s/:slug" element={<PublicStorePage />} />
+              <Route path="/auth" element={<AuthRoute />} />
+              <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+              <Route path="/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
+              <Route path="/transactions" element={<ProtectedRoute><TransactionsPage /></ProtectedRoute>} />
+              <Route path="/pos" element={<ProtectedRoute><POSPage /></ProtectedRoute>} />
+              <Route path="/store-config" element={<ProtectedRoute><StoreSettingsPage /></ProtectedRoute>} />
+              <Route path="/categories" element={<ProtectedRoute><CategoriesPage /></ProtectedRoute>} />
+              <Route path="/calculator" element={<ProtectedRoute><CalculatorPage /></ProtectedRoute>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

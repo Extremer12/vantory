@@ -109,6 +109,14 @@ export default function POSPage() {
 
       const { error } = await supabase.from('transactions').insert(transactions);
       if (error) throw error;
+
+      for (const item of cart) {
+        const { error: updateError } = await supabase
+          .from('products')
+          .update({ current_stock: item.stock - item.quantity })
+          .eq('id', item.id);
+        if (updateError) throw updateError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
