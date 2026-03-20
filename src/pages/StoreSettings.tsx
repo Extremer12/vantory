@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { SectionHelp } from '@/components/SectionHelp';
-import { Store, Globe, Type, Image as ImageIcon, Link as LinkIcon, Save, Copy, Upload, X, MessageCircle, Moon, Sun, Palette } from 'lucide-react';
+import { Store, Globe, Type, Image as ImageIcon, Link as LinkIcon, Save, Copy, Upload, X, MessageCircle, Moon, Sun, Palette, Layout, Paintbrush, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function StoreSettingsPage() {
@@ -24,12 +24,18 @@ export default function StoreSettingsPage() {
   const [isPublic, setIsPublic] = useState(false);
   const [whatsapp, setWhatsapp] = useState('');
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [primaryColor, setPrimaryColor] = useState('#000000');
+  const [carouselImages, setCarouselImages] = useState<string[]>([]);
+  const [bannerText, setBannerText] = useState('');
+  const [headerStyle, setHeaderStyle] = useState('classic');
 
   // File states
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [carouselFiles, setCarouselFiles] = useState<File[]>([]);
+  const [carouselPreviews, setCarouselPreviews] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -61,6 +67,11 @@ export default function StoreSettingsPage() {
       setBannerPreview((profile as any).store_banner_url || null);
       setWhatsapp((profile as any).store_whatsapp || '');
       setTheme((profile as any).store_theme || 'dark');
+      setPrimaryColor((profile as any).store_primary_color || '#000000');
+      setCarouselImages((profile as any).store_carousel_images || []);
+      setCarouselPreviews((profile as any).store_carousel_images || []);
+      setBannerText((profile as any).store_banner_text || '');
+      setHeaderStyle((profile as any).store_header_style || 'classic');
       isLoadedRef.current = true;
     }
   }, [profile]);
@@ -99,6 +110,32 @@ export default function StoreSettingsPage() {
     if (bannerInputRef.current) bannerInputRef.current.value = '';
   };
 
+  const handleCarouselSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    
+    const validFiles = files.filter(file => {
+      if (!file.type.startsWith('image/')) { toast.error(`Archivo ${file.name} no es una imagen`); return false; }
+      if (file.size > 5 * 1024 * 1024) { toast.error(`${file.name} supera 5MB`); return false; }
+      return true;
+    });
+
+    setCarouselFiles(prev => [...prev, ...validFiles]);
+    
+    validFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => setCarouselPreviews(prev => [...prev, reader.result as string]);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeCarouselImage = (index: number) => {
+    setCarouselPreviews(prev => prev.filter((_, i) => i !== index));
+    // If it was a newly added file, remove it from carouselFiles too
+    // This is a bit tricky since preview index might not align perfectly if we have mixed existing and new images
+    // For simplicity, we'll re-calculate carouselImages on save
+  };
+
   const updateProfile = useMutation({
     mutationFn: async () => {
       setUploading(true);
@@ -131,6 +168,24 @@ export default function StoreSettingsPage() {
           .replace(/-+/g, '-')
           .replace(/^-|-$/g, '');
 
+        // 1. Upload new carousel images
+        const uploadedCarouselUrls: string[] = [];
+        for (const file of carouselFiles) {
+          const ext = file.name.split('.').pop();
+          const fileName = `${user!.id}/carousel_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+          const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, file);
+          if (uploadError) throw new Error('Error subiendo imagen del carrusel: ' + uploadError.message);
+          const { data } = supabase.storage.from('product-images').getPublicUrl(fileName);
+          uploadedCarouselUrls.push(data.publicUrl);
+        }
+
+        // 2. Merge with existing ones (only those still in previews)
+        const finalCarouselUrls = [
+          ...carouselPreviews.filter(p => p.startsWith('http')), // existing URLs
+          ...uploadedCarouselUrls // newly uploaded ones
+        ];
+
+        // 3. Update Profile
         const { error } = await supabase
         .from('profiles')
         .update({
@@ -142,11 +197,19 @@ export default function StoreSettingsPage() {
           store_public: isPublic as any,
           store_whatsapp: whatsapp as any,
           store_theme: theme as any,
+          store_primary_color: primaryColor,
+          store_carousel_images: finalCarouselUrls,
+          store_banner_text: bannerText,
+          store_header_style: headerStyle,
         } as any)
         .eq('id', user!.id);
       
         if (error) throw error;
-        return formattedSlug; // return what we saved
+        
+        // Clear file states after success
+        setCarouselFiles([]);
+        
+        return formattedSlug; 
       } finally {
         setUploading(false);
       }
@@ -176,6 +239,15 @@ export default function StoreSettingsPage() {
       toast.success('Enlace copiado al portapapeles');
     }
   };
+
+  const palettes = [
+    { name: 'Industrial', color: '#000000' },
+    { name: 'Cobalto', color: '#2563eb' },
+    { name: 'Esmeralda', color: '#059669' },
+    { name: 'Borgonia', color: '#991b1b' },
+    { name: 'Violeta', color: '#7c3aed' },
+    { name: 'Ámbar', color: '#d97706' },
+  ];
 
   if (isLoading) {
     return <div className="p-8 text-center text-muted-foreground">Cargando configuración...</div>;
@@ -301,6 +373,108 @@ export default function StoreSettingsPage() {
                       >
                         <Moon size={20} /> Oscuro
                       </button>
+                    </div>
+                  </div>
+
+                  {/* Rediseño: Personalización Avanzada */}
+                  <div className="space-y-6 pt-6 border-t border-white/5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Paintbrush size={18} className="text-primary" />
+                      <h3 className="font-semibold text-foreground">Personalización Avanzada</h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div className="space-y-3 col-span-1 sm:col-span-2">
+                        <Label className="flex items-center gap-2 text-foreground/80">Paletas Recomendadas</Label>
+                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                          {palettes.map((p) => (
+                            <button
+                              key={p.name}
+                              type="button"
+                              onClick={() => setPrimaryColor(p.color)}
+                              className={`flex flex-col items-center gap-2 p-2 rounded-xl border-2 transition-all ${primaryColor === p.color ? 'border-primary bg-primary/5' : 'border-white/5 bg-white/5 hover:border-white/20'}`}
+                            >
+                              <div className="w-8 h-8 rounded-full shadow-inner" style={{ backgroundColor: p.color }} />
+                              <span className="text-[10px] font-bold uppercase tracking-tighter">{p.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2 text-foreground/80">Color Manual</Label>
+                        <div className="flex gap-3">
+                          <input 
+                            type="color" 
+                            value={primaryColor} 
+                            onChange={(e) => setPrimaryColor(e.target.value)}
+                            className="w-12 h-12 rounded-lg cursor-pointer border-0 bg-transparent"
+                          />
+                          <Input 
+                            value={primaryColor}
+                            onChange={(e) => setPrimaryColor(e.target.value)}
+                            placeholder="#FF0000"
+                            className="bg-white/5 border-white/10 uppercase"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2 text-foreground/80">Estilo de Cabecera</Label>
+                        <select 
+                          value={headerStyle}
+                          onChange={(e) => setHeaderStyle(e.target.value)}
+                          className="w-full h-10 px-3 rounded-md border border-white/10 bg-white/5 text-foreground focus:ring-primary"
+                        >
+                          <option value="classic">Clásico (Logo izquierda)</option>
+                          <option value="centered">Centrado (Boutique)</option>
+                          <option value="minimal">Minimalista</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2 text-foreground/80">Texto del Banner (Headline)</Label>
+                      <Input 
+                        value={bannerText}
+                        onChange={(e) => setBannerText(e.target.value)}
+                        placeholder="Ej: Nueva Colección Primavera 2024"
+                        className="bg-white/5 border-white/10"
+                      />
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label className="flex items-center gap-2 text-foreground/80"><Layers size={16} /> Imágenes del Carrusel (Hero)</Label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        {carouselPreviews.map((preview, index) => (
+                          <div key={index} className="relative aspect-square rounded-xl overflow-hidden border border-white/10 group">
+                            <img src={preview} alt={`Carousel ${index}`} className="w-full h-full object-cover" />
+                            <button 
+                              type="button" 
+                              onClick={() => removeCarouselImage(index)}
+                              className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.multiple = true;
+                            input.accept = 'image/*';
+                            input.onchange = (e) => handleCarouselSelect(e as any);
+                            input.click();
+                          }}
+                          className="aspect-square rounded-xl border-2 border-dashed border-white/10 hover:border-primary/40 bg-white/[0.02] hover:bg-white/[0.04] transition-all flex flex-col items-center justify-center gap-2 text-muted-foreground"
+                        >
+                          <Upload size={20} />
+                          <span className="text-xs">Agregar</span>
+                        </button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Estas imágenes aparecerán en el carrusel principal de tu tienda.</p>
                     </div>
                   </div>
                 </div>

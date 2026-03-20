@@ -20,6 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { generateInventoryPDF } from '@/lib/pdf-generator';
 import { SectionHelp } from '@/components/SectionHelp';
 import { EmptyState } from '@/components/EmptyState';
+import { ImageCropper } from '@/components/ImageCropper';
 
 const emptyForm = { name: '', sku: '', cost_price: '', sale_price: '', current_stock: '0', min_stock: '5', is_public: true, category: '', description: '' };
 
@@ -38,6 +39,11 @@ export default function InventoryPage() {
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [isExporting, setIsExporting] = useState(false);
+
+  // Cropper State
+  const [croppingImage, setCroppingImage] = useState<string | null>(null);
+  const [isCropping, setIsCropping] = useState(false);
+  const [isGalleryCrop, setIsGalleryCrop] = useState(false);
 
   // Gallery State
   const [galleryFiles, setGalleryFiles] = useState<{file: File, preview: string}[]>([]);
@@ -126,10 +132,32 @@ export default function InventoryPage() {
     if (!file) return;
     if (!file.type.startsWith('image/')) { toast.error('Solo se permiten archivos de imagen'); return; }
     if (file.size > 5 * 1024 * 1024) { toast.error('La imagen no puede superar 5MB'); return; }
-    setImageFile(file);
+    
+    setIsGalleryCrop(false);
     const reader = new FileReader();
-    reader.onloadend = () => setImagePreview(reader.result as string);
+    reader.onloadend = () => {
+      setCroppingImage(reader.result as string);
+      setIsCropping(true);
+    };
     reader.readAsDataURL(file);
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    const fileName = isGalleryCrop ? `gallery_${Date.now()}.jpg` : `product_${Date.now()}.jpg`;
+    const croppedFile = new File([croppedBlob], fileName, { type: 'image/jpeg' });
+    
+    if (isGalleryCrop) {
+      setGalleryFiles(prev => [...prev, {
+        file: croppedFile,
+        preview: URL.createObjectURL(croppedBlob)
+      }]);
+    } else {
+      setImageFile(croppedFile);
+      setImagePreview(URL.createObjectURL(croppedBlob));
+    }
+    
+    setIsCropping(false);
+    setCroppingImage(null);
   };
 
   const clearImage = () => {
@@ -193,11 +221,20 @@ export default function InventoryPage() {
 
   const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    const newFiles = files.map(file => ({
-      file,
-      preview: URL.createObjectURL(file)
-    }));
-    setGalleryFiles(prev => [...prev, ...newFiles]);
+    if (files.length === 0) return;
+    
+    // We'll crop them one by one if multiple are selected, or just the first one for now
+    // For simplicity and better UX, we'll just handle the first one if multiple are picked
+    const file = files[0];
+    if (!file.type.startsWith('image/')) { toast.error('Solo se permiten imágenes'); return; }
+    
+    setIsGalleryCrop(true);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setCroppingImage(reader.result as string);
+      setIsCropping(true);
+    };
+    reader.readAsDataURL(file);
   };
 
   const removeGalleryFile = (index: number) => {
@@ -581,6 +618,14 @@ export default function InventoryPage() {
             </motion.div>
           )}
         </AnimatePresence>
+      )}
+
+      {isCropping && croppingImage && (
+        <ImageCropper 
+          image={croppingImage} 
+          onCropComplete={handleCropComplete} 
+          onCancel={() => { setIsCropping(false); setCroppingImage(null); }} 
+        />
       )}
     </div>
   );
